@@ -1,8 +1,8 @@
-# Weblisk Framework v2.0
+# Weblisk Framework v1.0
 
 A minimal, lightning-fast HTML-over-WebSocket framework for Deno that enables real-time applications with native TypeScript support and zero dependencies.
 
-## ✨ Features
+## Features
 
 - **Lightning Fast**: Built on Deno's native runtime with zero dependencies
 - **Secure by Default**: Deno's permission-based security model
@@ -13,7 +13,7 @@ A minimal, lightning-fast HTML-over-WebSocket framework for Deno that enables re
 - **Hot Reload Ready**: Built-in development workflow
 - **Session Management**: Automatic cookie-based session persistence
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 your-project/
