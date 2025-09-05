@@ -1,0 +1,35 @@
+{
+  "name": "@avaropoint/weblisk",
+  "version": "2.0.0",
+  "description": "A lightning-fast HTML-over-WebSocket framework for Deno",
+  "exports": {
+    ".": "./lib/weblisk.ts"
+  },
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-write --watch src/app.ts",
+    "start": "deno run --allow-net --allow-read src/app.ts",
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "test": "deno test --allow-net --allow-read"
+  },
+  "imports": {
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false,
+    "proseWrap": "preserve"
+  },
+  "lint": {
+    "include": ["src/", "lib/", "*.ts"],
+    "exclude": ["node_modules/", "dist/"]
+  }
+}
