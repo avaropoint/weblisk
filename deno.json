@@ -1,7 +1,7 @@
 {
   "name": "@avaropoint/weblisk",
-  "version": "2.0.0",
-  "description": "A lightning-fast HTML-over-WebSocket framework for Deno",
+  "version": "1.0.0",
+  "description": "A minimal HTML-over-WebSocket framework for Deno with modular architecture",
   "exports": {
     ".": "./mod.ts",
     "./lib": "./lib/index.ts"

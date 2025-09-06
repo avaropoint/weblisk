@@ -1,5 +1,5 @@
 /**
- * Comprehensive test suite for Weblisk Framework v2.0 - Modular Architecture
+ * Comprehensive test suite for Weblisk Framework v1.0 - Modular Architecture
  * Testing the new modular structure and clean API
  */
 
@@ -45,7 +45,7 @@ const getTestConfig = (port: number, extraConfig = {}) => ({
   ...extraConfig,
 });
 
-Deno.test("Weblisk Framework v2.0 - Modular Architecture", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Modular Architecture", async (t) => {
   await t.step("Framework initialization with config", () => {
     const app = new Weblisk(getTestConfig(TEST_PORT, {
       development: { debugMode: true },
@@ -143,7 +143,7 @@ Deno.test("Weblisk Framework v2.0 - Modular Architecture", async (t) => {
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Template Helpers", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Template Helpers", async (t) => {
   await t.step("HTML template helper", () => {
     const name = "World";
     const htmlResult = html`
@@ -193,7 +193,7 @@ Deno.test("Weblisk Framework v2.0 - Template Helpers", async (t) => {
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Configuration System", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Configuration System", async (t) => {
   await t.step("Partial configuration (DeepPartial)", () => {
     // Test that partial config works (this was a major fix)
     const app1 = new Weblisk(getTestConfig(TEST_PORT + 10));
@@ -220,7 +220,7 @@ Deno.test("Weblisk Framework v2.0 - Configuration System", async (t) => {
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Modular Components", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Modular Components", async (t) => {
   await t.step("Static file manager integration", () => {
     const app = new Weblisk(getTestConfig(TEST_PORT + 20));
 
@@ -281,7 +281,7 @@ Deno.test("Weblisk Framework v2.0 - Modular Components", async (t) => {
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Error Handling", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Error Handling", async (t) => {
   await t.step("WebliskError class", () => {
     const error = new WebliskError("Test error", "TEST_CODE");
     assertEquals(error.name, "WebliskError");
@@ -309,7 +309,7 @@ Deno.test("Weblisk Framework v2.0 - Error Handling", async (t) => {
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Logger System", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Logger System", async (t) => {
   await t.step("Logger interface", () => {
     assertEquals(typeof logger.setLevel, "function");
     assertEquals(typeof logger.info, "function");
@@ -334,7 +334,7 @@ Deno.test("Weblisk Framework v2.0 - Logger System", async (t) => {
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Integration Test", async (t) => {
+Deno.test("Weblisk Framework v1.0 - Integration Test", async (t) => {
   await t.step("Full application lifecycle", async () => {
     const app = new Weblisk(getTestConfig(TEST_PORT + 40, {
       development: { debugMode: true },
@@ -401,4 +401,4 @@ Deno.test("Weblisk Framework v2.0 - Integration Test", async (t) => {
   });
 });
 
-console.log("✅ Weblisk Framework v2.0 Modular Test Suite Completed!");
+console.log("✅ Weblisk Framework v1.0 Modular Test Suite Completed!");

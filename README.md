@@ -1,24 +1,28 @@
 # Weblisk Framework v1.0
 
-A revolutionary HTML-over-WebSocket framework for Deno featuring **single-file routes** with JavaScript-powered CSS, true SSR, and real-time capabilities.
+A minimal HTML-over-WebSocket framework for Deno featuring **flexible route configuration** with JavaScript-powered CSS, true SSR, and real-time capabilities.
 
 ## 🚀 What's New in v1.0
 
-- **📄 Single-File Routes**: Everything in one place - CSS, HTML, JavaScript, and WebSocket handlers
+- **🏗️ Modular Architecture**: Clean separation of concerns with dedicated modules for static files, WebSockets, monitoring, and more
+- **📄 Flexible Routes**: Choose between object-based configuration or WebliskRoute class for complex routes
 - **🎨 JavaScript-Powered CSS**: Dynamic styling with server data access (like SASS but runtime)
 - **⚡ True SSR + WebSocket**: Server-side rendering with real-time enhancement
 - **🔧 Zero Build Tools**: No compilation, bundling, or build steps needed
 - **💎 TypeScript Native**: Full type safety throughout the framework
+- **🛡️ Production Ready**: Comprehensive security, monitoring, and configuration management
 
 ## ✨ Features
 
-- **Lightning Fast**: Built on Deno's native runtime with zero dependencies
-- **Secure by Default**: Deno's permission-based security model
+- **Lightning Fast**: Built on Deno's native runtime with modular design
+- **Secure by Default**: Deno's permission-based security model with built-in CSRF protection
 - **WebSocket First**: Real-time communication built into every route
-- **Single-File Architecture**: Eliminate file sprawl with embedded everything
+- **Flexible Architecture**: Choose simple objects or powerful route classes
 - **Dynamic CSS**: JavaScript-powered styling with server data access
 - **True SSR**: Server-side rendering with client-side enhancement
 - **Session Management**: Automatic cookie-based session persistence
+- **Health Monitoring**: Built-in health checks and metrics
+- **Static File Management**: Efficient static file serving with ETag caching
 - **Hot Reload Ready**: Built-in development workflow
 
 ## 🏗️ Project Structure
@@ -26,29 +30,43 @@ A revolutionary HTML-over-WebSocket framework for Deno featuring **single-file r
 ```
 your-project/
 ├── lib/
-│   ├── weblisk.ts       # Core framework (now with single-file routes)
-│   ├── types.ts         # TypeScript definitions
+│   ├── weblisk.ts       # Core framework
+│   ├── routes.ts        # Route system and WebliskRoute class
+│   ├── static.ts        # Static file management
+│   ├── websockets.ts    # WebSocket connection management
+│   ├── monitor.ts       # Health monitoring and metrics
+│   ├── security.ts      # Security middleware
+│   ├── cookies.ts       # Cookie and session management
 │   ├── config.ts        # Configuration management
+│   ├── types.ts         # TypeScript definitions
 │   ├── logger.ts        # Logging system
-│   └── helpers.ts       # Template helpers
+│   ├── helpers.ts       # Template helpers
+│   └── index.ts         # Main exports
 ├── src/
 │   ├── app.ts           # Main application
-│   └── routes/          # Single-file routes
-│       ├── demo.ts      # Example route
-│       └── ...          # Your routes
+│   └── routes/          # Route files (optional organization)
+├── tests/
+│   └── weblisk.test.ts  # Comprehensive test suite
+├── examples/            # Example applications
+├── mod.ts               # Framework entry point
 ├── deno.json            # Deno configuration
 └── README.md            # This file
 ```
 
 ## 🚀 Quick Start
 
-### 1. Create a Single-File Route
+### 1. Simple Object-Based Route
 
 ```typescript
-// src/routes/hello.ts
-import { css, html, js, WebliskRoute } from "../../lib/weblisk.ts";
+// src/app.ts
+import { css, html, js, Weblisk } from "../mod.ts";
 
-export default new WebliskRoute({
+const app = new Weblisk({
+  server: { port: 3000 },
+  development: { debugMode: true },
+});
+
+app.route("/", {
   // 🎨 Dynamic CSS with JavaScript power
   styles: (data) =>
     css`
@@ -96,8 +114,8 @@ export default new WebliskRoute({
         <h1>🚀 ${data.title}</h1>
         <p>Welcome ${data.user.name}! Current time: ${data.currentTime}</p>
 
-        <button class="btn" data-action="greet">Say Hello</button>
-        <button class="btn" data-action="time">Get Time</button>
+        <button class="btn" onclick="sendEvent('greet')">Say Hello</button>
+        <button class="btn" onclick="sendEvent('time')">Get Time</button>
 
         <div id="output" style="margin-top: 2rem;"></div>
       </div>
@@ -109,29 +127,17 @@ export default new WebliskRoute({
     console.log('Route enhanced with data:', ${JSON.stringify(data)});
 
     // Setup interactions
-    document.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-
-        if (window.weblisk) {
-          window.weblisk.sendEvent('hello', action, {
-            timestamp: Date.now(),
-            user: ${JSON.stringify(data.user)}
-          });
-        }
-      });
-    });
-
-    // Listen for responses
-    if (window.weblisk) {
-      window.weblisk.on('hello-response', (response) => {
-        document.getElementById('output').innerHTML =
-          '<div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 6px;">' +
-          '<h3>' + response.action + '</h3>' +
-          '<p>' + response.message + '</p>' +
-          '</div>';
-      });
+    function sendEvent(action) {
+      if (window.WebliskApp) {
+        window.WebliskApp.sendEvent(action, {
+          timestamp: Date.now(),
+          user: ${JSON.stringify(data.user)}
+        });
+      }
     }
+
+    // Make function globally available
+    window.sendEvent = sendEvent;
   `,
 
   // 📊 Server-side data preparation
@@ -174,27 +180,44 @@ export default new WebliskRoute({
   meta: {
     title: "Hello Weblisk v1.0",
     description:
-      "A demonstration of single-file routes with embedded everything",
-    keywords: ["weblisk", "single-file", "websocket", "ssr"],
+      "A demonstration of flexible route configuration with embedded everything",
+    keywords: ["weblisk", "routes", "websocket", "ssr"],
   },
 });
+
+// Start the server
+app.start();
 ```
 
-### 2. Register the Route
+### 2. Advanced Route with WebliskRoute Class
+
+For more complex routes, you can use the `WebliskRoute` class:
 
 ```typescript
-// src/app.ts
-import Weblisk from "../lib/weblisk.ts";
-import helloRoute from "./routes/hello.ts";
+// src/routes/advanced.ts
+import { css, html, js, WebliskRoute } from "../../mod.ts";
+
+export default new WebliskRoute({
+  // Same configuration options as above, but with additional class methods
+  template: (data) =>
+    html`
+      <h1>Advanced Route: ${data.title}</h1>
+    `,
+  // Class-based routes support inheritance and method overrides
+});
 
 const app = new Weblisk();
 
 // Register single-file route
 app.route("/hello", helloRoute);
 
-// Or auto-discover all routes in a directory
-await app.discoverRoutes("./src/routes");
+// Register the advanced route
+app.route("/advanced", advancedRoute);
 
+// Add static files
+app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
+
+// Start the server
 await app.start();
 ```
 
@@ -210,15 +233,16 @@ deno task start
 
 ## 🎯 Core Concepts
 
-### Single-File Routes
+### Flexible Route Configuration
 
-Each route is a complete, self-contained file with:
+Routes can be configured using simple objects or the powerful `WebliskRoute` class:
 
 - **Dynamic CSS**: JavaScript-powered styling with server data access
 - **HTML Templates**: Server-rendered with data injection
 - **Client Enhancement**: Progressive enhancement with WebSocket integration
 - **Server Logic**: Data preparation and business logic
 - **Event Handlers**: Real-time WebSocket event processing
+- **Modular Architecture**: Separate concerns with dedicated modules
 
 ### JavaScript-Powered CSS
 
@@ -263,7 +287,7 @@ Built-in WebSocket handling in every route:
 
 ```typescript
 // Client to Server (in clientCode)
-window.weblisk.sendEvent('routeName', 'eventName', data);
+window.WebliskApp.sendEvent('eventName', data);
 
 // Server to Client (in events)
 events: {
@@ -271,12 +295,17 @@ events: {
     return { message: 'Hello from server!' };
   }
 }
-
-// Listen for responses (in clientCode)
-window.weblisk.on('route-response', (data) => {
-  // Handle server response
-});
 ```
+
+### Modular Architecture
+
+Weblisk v1.0 features a clean modular design:
+
+- **Static Files**: Efficient serving with ETag caching via `StaticFileManager`
+- **WebSockets**: Real-time communication via `WebSocketManager`
+- **Monitoring**: Health checks and metrics via `FrameworkMonitor`
+- **Security**: CSRF protection and rate limiting via `security`
+- **Configuration**: Environment-based config via `WebliskConfigManager`
 
 ## 📋 Available Commands
 
@@ -297,24 +326,27 @@ deno task lint
 deno task test
 ```
 
-## 🆚 v1.0 vs v1.0 Comparison
+## �️ Framework Features
 
-| Feature             | v1.0 (Component-Based) | v1.0 (Single-File Routes)         |
-| ------------------- | ---------------------- | --------------------------------- |
-| Files per feature   | 1 component file       | 1 route file                      |
-| CSS                 | Separate or inline     | JavaScript-powered, embedded      |
-| HTML                | Client-side rendering  | True server-side rendering        |
-| Real-time           | Manual WebSocket setup | Built-in WebSocket integration    |
-| Code organization   | Mixed client/server    | Clear separation with enhancement |
-| Syntax highlighting | Limited                | Full TypeScript + embedded assets |
-| Deployment          | Component bundling     | Single files                      |
+| Feature             | Description                                    |
+| ------------------- | ---------------------------------------------- |
+| Route Configuration | Object-based or class-based routes             |
+| CSS                 | JavaScript-powered, server data access         |
+| HTML                | True server-side rendering with data injection |
+| Real-time           | Built-in WebSocket integration                 |
+| Session Management  | Automatic cookie-based sessions                |
+| Static Files        | ETag caching and efficient serving             |
+| Health Monitoring   | Built-in health checks and metrics             |
+| Security            | CSRF protection and rate limiting              |
+| Type Safety         | Full TypeScript support throughout             |
+| Development         | Hot reload and comprehensive dev tools         |
 
 ## 🎨 Template Helpers
 
 Weblisk v1.0 includes powerful template helpers:
 
 ```typescript
-import { createTheme, css, html, js, styles } from "../lib/weblisk.ts";
+import { css, html, js } from "./mod.ts";
 
 // CSS with JavaScript power
 const dynamicStyles = css`
@@ -357,20 +389,27 @@ const theme = createTheme({
 
 Visit `http://localhost:3000/` to see:
 
-- Dynamic styling with color changes
-- Real-time data fetching via WebSocket
-- Live counter updates
-- Theme toggling
+````
+## 🌟 Production Features
 
-### Interactive Demo Page
+### Development Tools
+- **Hot Reload**: Automatic server restart on file changes
+- **Debug Mode**: Comprehensive logging and error reporting
+- **Type Safety**: Full TypeScript support with strict checking
+- **Testing**: Comprehensive test suite with 18 test scenarios
 
-Visit `http://localhost:3000/demo` to experience:
+### Production Ready
+- **Health Monitoring**: Built-in `/health` endpoint with metrics
+- **Static File Serving**: Efficient ETag caching and MIME type detection
+- **Session Management**: Secure cookie-based sessions
+- **Security**: CSRF protection, rate limiting, and security headers
+- **Configuration**: Environment-based configuration management
 
-- Multi-theme support with live switching
-- Weather data simulation
-- Random quote generator
-- System information display
-- Live statistics updates
+### Performance
+- **True SSR**: Server-side rendering for fast initial page loads
+- **WebSocket Optimization**: Efficient real-time communication
+- **Static Caching**: ETag-based caching for static assets
+- **Modular Architecture**: Clean separation of concerns for maintainability
 
 ## 📦 Deployment
 
@@ -378,16 +417,16 @@ Visit `http://localhost:3000/demo` to experience:
 
 ```bash
 deployctl deploy --project=your-project src/app.ts
-```
+````
 
 ### Docker
 
 ```dockerfile
-FROM denoland/deno:1.37.0
+FROM denoland/deno:latest
 WORKDIR /app
 COPY . .
 EXPOSE 3000
-CMD ["deno", "run", "--allow-net", "--allow-read", "src/app.ts"]
+CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "src/app.ts"]
 ```
 
 ### Traditional VPS
@@ -396,19 +435,22 @@ CMD ["deno", "run", "--allow-net", "--allow-read", "src/app.ts"]
 # Install Deno
 curl -fsSL https://deno.land/x/install/install.sh | sh
 
-# Run your app
-deno run --allow-net --allow-read src/app.ts
+# Run your app with production settings
+WEBLISK_ENV=production deno run --allow-net --allow-read --allow-env src/app.ts
 ```
 
-## 🎯 Why Single-File Routes?
+## 🎯 Why Weblisk v1.0?
 
-1. **🧠 Cognitive Load**: Everything related to a route is in one place
-2. **🔧 Refactoring**: Change one file, not four
-3. **♻️ Code Reuse**: Copy one file, get the entire feature
-4. **🚀 Deployment**: Simple file management
-5. **👥 Team Collaboration**: Clear ownership per route
-6. **🎨 Dynamic Styling**: CSS that responds to server data
-7. **⚡ Performance**: True SSR with progressive enhancement
+1. **🧠 Minimal Cognitive Load**: Simple object-based or class-based routes
+2. **🏗️ Modular Architecture**: Clean separation with dedicated modules
+3. **♻️ Code Reuse**: Copy configurations, extend with classes
+4. **🚀 Zero Build Tools**: No compilation or bundling required
+5. **👥 Team Collaboration**: Clear module ownership and responsibilities
+6. **🎨 Dynamic Styling**: CSS that responds to server data in real-time
+7. **⚡ Performance**: True SSR with progressive WebSocket enhancement
+8. **🛡️ Production Ready**: Built-in security, monitoring, and configuration
+9. **💎 Type Safety**: Full TypeScript support throughout the framework
+10. **🔧 Developer Experience**: Hot reload, comprehensive testing, and excellent tooling
 
 ## 📄 License
 
@@ -416,4 +458,4 @@ MIT License - feel free to use in your projects!
 
 ---
 
-**Weblisk v1.0** - Revolutionary single-file routes for the modern web 🚀
+**Weblisk v1.0** - A minimal, production-ready HTML-over-WebSocket framework for Deno 🚀
