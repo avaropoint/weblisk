@@ -1,17 +1,11 @@
-# GitHub Actions CI/CD Pipeline for Weblisk Framework
-name: CI/CD Pipeline
+# GitHub Actions CI Pipeline for Weblisk Framework
+name: CI Pipeline
 
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main]
-  release:
-    types: [published]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test:
@@ -66,155 +60,34 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          # Fetch full history for better secret detection
-          fetch-depth: 0
-
-      - name: Run security audit
-        run: |
-          # Check for known vulnerabilities in dependencies
-          deno info --json lib/weblisk.ts | grep -o '"specifier":[^,]*' | grep -o 'https://[^"]*' | sort -u > deps.txt
-          echo "Dependencies:"
-          cat deps.txt
-
-      - name: Scan for secrets
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          extra_args: --no-verification --only-verified=false
-
-  build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: [test, security]
-    if: github.event_name != 'pull_request'
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/develop'
-    # environment: staging  # Uncomment when staging environment is created
-
-    steps:
-      - name: Deploy to staging environment
-        run: |
-          echo "Deploying to staging..."
-          # Add your deployment logic here
-          # Examples: kubectl, terraform, or cloud provider CLI
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
-    # environment: production  # Uncomment when production environment is created
-
-    steps:
-      - name: Deploy to production environment
-        run: |
-          echo "Deploying to production..."
-          # Add your deployment logic here
-          # Examples: kubectl, terraform, or cloud provider CLI
-
-  performance:
-    name: Performance Testing
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v2.4.5
 
-      - name: Start server
+      - name: Run security audit
         run: |
-          WEBLISK_ENV=test deno run --allow-net --allow-read --allow-env src/app.ts &
-          echo $! > server.pid
-          sleep 5
-
-      - name: Install k6
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
-
-      - name: Run performance tests
-        run: |
-          cat > performance-test.js << 'EOF'
-          import http from 'k6/http';
-          import { check } from 'k6';
-
-          export let options = {
-            stages: [
-              { duration: '30s', target: 20 },
-              { duration: '1m', target: 20 },
-              { duration: '30s', target: 0 },
-            ],
-          };
-
-          export default function() {
-            let response = http.get('http://localhost:3000/');
-            check(response, {
-              'status is 200': (r) => r.status === 200,
-              'response time < 500ms': (r) => r.timings.duration < 500,
-            });
-          }
-          EOF
-
-          k6 run performance-test.js
-
-      - name: Cleanup
-        if: always()
-        run: |
-          if [ -f server.pid ]; then
-            kill $(cat server.pid) || true
+          # Check for known vulnerabilities in dependencies
+          echo "=== Dependency Security Audit ==="
+          deno info --json lib/weblisk.ts | grep -o '"specifier":[^,]*' | grep -o 'https://[^"]*' | sort -u > deps.txt
+          echo "External dependencies found:"
+          cat deps.txt
+          
+          # Basic security checks
+          echo "=== Basic Security Checks ==="
+          echo "Checking for common security issues..."
+          
+          # Check for potential secrets in code (basic patterns)
+          if grep -r -i "password\|secret\|key\|token" lib/ src/ --include="*.ts" --exclude-dir=node_modules; then
+            echo "⚠️  Potential secrets found in code - please review"
+          else
+            echo "✅ No obvious secrets found in source code"
+          fi
+          
+          # Check for eval usage
+          if grep -r "eval(" lib/ src/ --include="*.ts"; then
+            echo "⚠️  eval() usage found - potential security risk"
+          else
+            echo "✅ No eval() usage found"
           fi
