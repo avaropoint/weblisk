@@ -96,9 +96,9 @@ Deno.test("Weblisk Framework v1.0 - Modular Architecture", async (t) => {
         function testWebSocket() {
           if (window.weblisk) {
             window.weblisk.sendEvent('route', 'test', { message: 'Hello from client!' });
-            
+
             window.weblisk.on('test', (data) => {
-              document.getElementById('output').innerHTML = 
+              document.getElementById('output').innerHTML =
                 '<strong>Server Response:</strong> ' + data.message;
             });
           }
@@ -180,7 +180,7 @@ Deno.test("Weblisk Framework v1.0 - Template Helpers", async (t) => {
         console.log('Button clicked');
         window.weblisk.sendEvent('route', '${eventName}', { data: 'test' });
       }
-      
+
       window.weblisk.on('${eventName}', (data) => {
         console.log('Response:', data);
       });
@@ -375,9 +375,8 @@ Deno.test("Weblisk Framework v1.0 - Integration Test", async (t) => {
 
       events: {
         hello: (data, context) => ({
-          message: `Hello ${data.name}! Server time: ${
-            new Date().toISOString()
-          }`,
+          message: `Hello ${data.name}! Server time: ${new Date().toISOString()
+            }`,
           sessionId: context?.sessionId,
         }),
       },
@@ -400,4 +399,4 @@ Deno.test("Weblisk Framework v1.0 - Integration Test", async (t) => {
   });
 });
 
-console.log("✅ Weblisk Framework v1.0 Modular Test Suite Completed!");
+console.log("Weblisk Framework v1.0 Modular Test Suite Completed!");

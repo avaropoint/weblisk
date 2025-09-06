@@ -56,14 +56,14 @@ app.route("/", {
     function testWebSocket() {
       if (window.weblisk) {
         window.weblisk.sendEvent('route', 'test', { message: 'Hello from client!' });
-        
+
         window.weblisk.on('test', (data) => {
           const outputElement = document.getElementById('output');
           if (outputElement) {
             // Use framework's proper DOM-based methods for maximum security
             const strongElement = webliskSafe.createSafeElement('strong', 'Server Response: ');
             const messageText = document.createTextNode(data.message || '');
-            
+
             // Clear and append safely
             webliskSafe.clearAndAppend(outputElement, strongElement, messageText);
           }
@@ -97,4 +97,4 @@ app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
 // Start the server
 await app.start();
 
-console.log("🚀 Weblisk app running on " + app.getServerUrl());
+console.log("Weblisk app running on " + app.getServerUrl());
