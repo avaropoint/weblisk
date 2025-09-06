@@ -3,8 +3,7 @@
  * Testing the new modular structure and clean API
  */
 
-import { assertEquals, assertExists, assertThrows } from "@std/assert";
-import { delay } from "@std/async";
+import { assertEquals, assertExists } from "@std/assert";
 import { css, html, js, Weblisk } from "../mod.ts";
 import { WebliskError } from "../lib/types.ts";
 import { LOG_LEVELS, logger } from "../lib/logger.ts";
@@ -335,7 +334,7 @@ Deno.test("Weblisk Framework v1.0 - Logger System", async (t) => {
 });
 
 Deno.test("Weblisk Framework v1.0 - Integration Test", async (t) => {
-  await t.step("Full application lifecycle", async () => {
+  await t.step("Full application lifecycle", () => {
     const app = new Weblisk(getTestConfig(TEST_PORT + 40, {
       development: { debugMode: true },
     }));

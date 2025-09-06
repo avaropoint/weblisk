@@ -34,10 +34,10 @@ jobs:
         run: deno check lib/weblisk.ts src/app.ts tests/*.ts
 
       - name: Run linting
-        run: deno lint --ignore=examples/
+        run: deno lint
 
       - name: Run formatting check
-        run: deno fmt --check --ignore=examples/
+        run: deno fmt --check
 
       - name: Run tests
         run: deno test --allow-net --allow-read --allow-env tests/

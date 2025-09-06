@@ -47,15 +47,30 @@
     "indentWidth": 2,
     "semiColons": true,
     "singleQuote": false,
-    "proseWrap": "preserve"
+    "proseWrap": "preserve",
+    "include": [
+      "src/",
+      "lib/",
+      "tests/",
+      "*.ts"
+    ],
+    "exclude": [
+      "README.md",
+      "*.md",
+      "examples/",
+      "node_modules/",
+      "dist/"
+    ]
   },
   "lint": {
     "include": [
       "src/",
       "lib/",
+      "tests/",
       "*.ts"
     ],
     "exclude": [
+      "examples/",
       "node_modules/",
       "dist/"
     ]
