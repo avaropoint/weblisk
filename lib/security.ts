@@ -199,7 +199,7 @@ export class WebliskSecurity {
       
       safeInnerHTML: function(element, content) {
         if (typeof content === 'string') {
-          element.innerHTML = this.escapeHtml(content);
+          element.textContent = content;
         } else {
           element.textContent = String(content || '');
         }
