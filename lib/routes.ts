@@ -87,10 +87,18 @@ export interface WebliskFrameworkRouteConfig {
   clientCode?: (data: Record<string, unknown>) => string;
 
   // Server-side data preparation
-  data?: (context: RouteContext) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  data?: (
+    context: RouteContext,
+  ) => Promise<Record<string, unknown>> | Record<string, unknown>;
 
   // WebSocket event handlers
-  events?: Record<string, (data: Record<string, unknown>, context: RouteContext) => Promise<unknown> | unknown>;
+  events?: Record<
+    string,
+    (
+      data: Record<string, unknown>,
+      context: RouteContext,
+    ) => Promise<unknown> | unknown
+  >;
 
   // Route metadata and HTML configuration
   meta?: WebliskMeta;
@@ -116,10 +124,15 @@ export interface WebliskAppConfig {
   ) => string;
   globalStyles?: (data: Record<string, unknown>) => string;
   globalClientCode?: (data: Record<string, unknown>) => string;
-  globalData?: (context: RouteContext) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  globalData?: (
+    context: RouteContext,
+  ) => Promise<Record<string, unknown>> | Record<string, unknown>;
   globalEvents?: Record<
     string,
-    (data: Record<string, unknown>, context: RouteContext) => Promise<unknown> | unknown
+    (
+      data: Record<string, unknown>,
+      context: RouteContext,
+    ) => Promise<unknown> | unknown
   >;
 
   // Global defaults
@@ -482,7 +495,9 @@ export class WebliskRoute {
   /**
    * Build the complete data by merging framework → app → route data
    */
-  protected async buildData(context: RouteContext): Promise<Record<string, unknown>> {
+  protected async buildData(
+    context: RouteContext,
+  ): Promise<Record<string, unknown>> {
     const frameworkData = {
       timestamp: new Date().toLocaleString(),
       sessionId: context.sessionId || "",
@@ -504,7 +519,13 @@ export class WebliskRoute {
   /**
    * Build the complete events by merging framework → app → route events
    */
-  protected buildEvents(): Record<string, (data: Record<string, unknown>, context: RouteContext) => Promise<unknown> | unknown> {
+  protected buildEvents(): Record<
+    string,
+    (
+      data: Record<string, unknown>,
+      context: RouteContext,
+    ) => Promise<unknown> | unknown
+  > {
     const frameworkEvents = {
       "ping": () => ({ pong: true, timestamp: Date.now() }),
     };
@@ -569,7 +590,11 @@ export class WebliskRoute {
   /**
    * Handle WebSocket events for this route
    */
-  async handleEvent(eventName: string, data: Record<string, unknown>, context: RouteContext): Promise<unknown> {
+  async handleEvent(
+    eventName: string,
+    data: Record<string, unknown>,
+    context: RouteContext,
+  ): Promise<unknown> {
     const events = this.buildEvents();
     const handler = events[eventName];
 
@@ -583,7 +608,13 @@ export class WebliskRoute {
   /**
    * Get event handlers (for testing/debugging)
    */
-  getEventHandlers(): Record<string, (data: Record<string, unknown>, context: RouteContext) => Promise<unknown> | unknown> {
+  getEventHandlers(): Record<
+    string,
+    (
+      data: Record<string, unknown>,
+      context: RouteContext,
+    ) => Promise<unknown> | unknown
+  > {
     return this.buildEvents();
   }
 }

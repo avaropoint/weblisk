@@ -84,7 +84,12 @@ export interface WebSocketConnection {
 // Framework interface for better separation
 export interface WebliskFramework {
   component(name: string, definition: ComponentDefinition): WebliskFramework;
-  route(path: string, routeConfig: Record<string, unknown> | ((request: Request) => Response | Promise<Response>)): WebliskFramework;
+  route(
+    path: string,
+    routeConfig:
+      | Record<string, unknown>
+      | ((request: Request) => Response | Promise<Response>),
+  ): WebliskFramework;
   discoverRoutes(routesDir: string): Promise<WebliskFramework>;
   start(): Promise<void>;
   stop(): Promise<void>;
@@ -176,7 +181,12 @@ export class ServerError extends WebliskError {
 
 // Framework interface
 export interface IWebliskFramework {
-  route(path: string, routeConfig: Record<string, unknown> | ((request: Request) => Response | Promise<Response>)): IWebliskFramework;
+  route(
+    path: string,
+    routeConfig:
+      | Record<string, unknown>
+      | ((request: Request) => Response | Promise<Response>),
+  ): IWebliskFramework;
   addStaticFile(path: string, content: string, contentType?: string): void;
   loadStaticFiles(directory: string): Promise<void>;
   start(): Promise<void>;

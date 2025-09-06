@@ -9,8 +9,8 @@ import type {
   ComponentContext,
   ComponentDefinition,
   ServerEventMessage,
-  WebSocketConnection,
   WebliskFramework,
+  WebSocketConnection,
 } from "./types.ts";
 
 export interface WebSocketStats {

@@ -147,12 +147,18 @@ export class WebliskConfigManager {
     const result = structuredClone(defaultConf); // Deep clone the default config
 
     // Deep merge user config over default
-    this.deepMerge(result as unknown as Record<string, unknown>, userConf as unknown as Record<string, unknown>);
+    this.deepMerge(
+      result as unknown as Record<string, unknown>,
+      userConf as unknown as Record<string, unknown>,
+    );
 
     return result;
   }
 
-  private deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): void {
+  private deepMerge(
+    target: Record<string, unknown>,
+    source: Record<string, unknown>,
+  ): void {
     for (const key in source) {
       if (source[key] !== undefined) {
         if (Array.isArray(source[key])) {
@@ -161,7 +167,10 @@ export class WebliskConfigManager {
           if (!target[key] || typeof target[key] !== "object") {
             target[key] = {};
           }
-          this.deepMerge(target[key] as Record<string, unknown>, source[key] as Record<string, unknown>);
+          this.deepMerge(
+            target[key] as Record<string, unknown>,
+            source[key] as Record<string, unknown>,
+          );
         } else {
           target[key] = source[key];
         }
