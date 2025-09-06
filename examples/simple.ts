@@ -51,18 +51,72 @@ app.route("/", {
       }
     `,
 
-  clientCode: () =>
-    js`
-    function testWebSocket() {
-      if (window.weblisk) {
-        window.weblisk.sendEvent('route', 'test', { message: 'Hello from client!' });
-        
-        window.weblisk.on('test', (data) => {
-          document.getElementById('output').innerHTML = 
-            '<strong>Server Response:</strong> ' + data.message;
+  clientCode: () => js`
+    // Use Weblisk's built-in safe functions for XSS protection
+    let clickCount = 0;
+    
+    function updateDisplay() {
+      const displayElement = document.getElementById('display');
+      const input = document.getElementById('userInput');
+      const userText = input.value.trim();
+      
+      clickCount++;
+      
+      // Input validation
+      if (userText.length > 100) {
+        webliskSafe.safeInnerHTML(displayElement, 
+          '<span style="color: red;">Input too long (max 100 characters)</span>'
+        );
+        return;
+      }
+      
+      // Use framework's safe HTML function to prevent XSS
+      webliskSafe.safeInnerHTML(displayElement, 
+        '<div style="padding: 10px; background: #f0f8ff; border-radius: 5px; margin: 10px 0;">' +
+          '<strong>Click #' + clickCount + ':</strong><br>' +
+          'User said: "<span style="color: #333;">' + (userText || 'Nothing yet!') + '</span>"<br>' +
+          '<small style="color: #666;">Time: ' + new Date().toLocaleTimeString() + '</small>' +
+        '</div>'
+      );
+      
+      // Send to server via WebSocket (framework handles sanitization)
+      if (window.weblisk && userText) {
+        window.weblisk.sendEvent('route', 'user_action', {
+          message: userText,
+          clickCount: clickCount
         });
       }
     }
+    
+    // Handle server responses
+    window.weblisk?.on('user_action', (data) => {
+      console.log('Server response:', data);
+      const responseDiv = document.getElementById('serverResponse') || 
+                         document.createElement('div');
+      responseDiv.id = 'serverResponse';
+      
+      // Safe display of server response
+      webliskSafe.safeInnerHTML(responseDiv, 
+        '<div style="padding: 8px; background: #e8f5e8; border-radius: 4px; margin-top: 10px;">' +
+          '<strong>Server Echo:</strong> ' + data.echo + '<br>' +
+          '<small>Processed at: ' + data.timestamp + '</small>' +
+        '</div>'
+      );
+      
+      document.body.appendChild(responseDiv);
+    });
+    
+    // Add event listener for the button
+    document.getElementById('actionButton').addEventListener('click', updateDisplay);
+    
+    // Handle Enter key in input
+    document.getElementById('userInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        updateDisplay();
+      }
+    });
+    
+    console.log('Secure Weblisk example initialized with framework XSS protection');
   `,
 
   data: () => ({
@@ -70,10 +124,17 @@ app.route("/", {
   }),
 
   events: {
-    test: (data) => ({
-      message: `Received: ${data.message} - Response from server!`,
-      timestamp: new Date().toISOString(),
-    }),
+    test: (data) => {
+      // Validate and sanitize input data to prevent security issues
+      const message = typeof data.message === 'string' 
+        ? data.message.slice(0, 200) // Limit length to prevent DoS
+        : 'Invalid message format';
+      
+      return {
+        echo: 'Received: ' + message + ' - Response from server!',
+        timestamp: new Date().toISOString(),
+      };
+    },
   },
 });
 
@@ -83,4 +144,4 @@ app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
 // Start the server
 await app.start();
 
-console.log(`🚀 Weblisk app running on ${app.getServerUrl()}`);
+console.log('🚀 Weblisk app running on ' + app.getServerUrl());

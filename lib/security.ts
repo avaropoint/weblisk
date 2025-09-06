@@ -137,17 +137,34 @@ export class WebliskSecurity {
 
   /**
    * Sanitize user input to prevent injection attacks
+   * Provides comprehensive XSS protection at the framework level
    */
   sanitizeInput(input: unknown): unknown {
     if (typeof input === "string") {
-      // Basic HTML encoding
-      return input
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#x27;")
-        .replace(/\//g, "&#x2F;");
+      // Comprehensive HTML encoding for XSS prevention
+      let sanitized = input
+        .replace(/&/g, "&amp;") // Must be first
+        .replace(/</g, "&lt;") // Prevent tag injection
+        .replace(/>/g, "&gt;") // Prevent tag injection
+        .replace(/"/g, "&quot;") // Prevent attribute injection
+        .replace(/'/g, "&#x27;") // Prevent attribute injection
+        .replace(/\//g, "&#x2F;") // Prevent closing tag injection
+        .replace(/\\/g, "&#x5C;") // Prevent escape sequences
+        .replace(/`/g, "&#x60;"); // Prevent template literal injection
+
+      // Additional protection against common XSS payloads
+      sanitized = sanitized
+        .replace(/javascript:/gi, "blocked:")
+        .replace(/vbscript:/gi, "blocked:")
+        .replace(/data:/gi, "blocked:")
+        .replace(/on\w+\s*=/gi, "blocked="); // Block event handlers
+
+      // Limit length to prevent DoS attacks
+      if (sanitized.length > 10000) {
+        sanitized = sanitized.substring(0, 10000) + "... [truncated]";
+      }
+
+      return sanitized;
     }
 
     if (Array.isArray(input)) {
@@ -163,6 +180,43 @@ export class WebliskSecurity {
     }
 
     return input;
+  }
+
+  /**
+   * Generate safe client-side code for HTML escaping
+   * This provides users with a secure utility function
+   */
+  generateEscapeFunction(): string {
+    return `
+    // Weblisk Framework - Built-in XSS Protection
+    window.webliskSafe = {
+      escapeHtml: function(text) {
+        if (typeof text !== 'string') return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      },
+      
+      safeInnerHTML: function(element, content) {
+        if (typeof content === 'string') {
+          element.innerHTML = this.escapeHtml(content);
+        } else {
+          element.textContent = String(content || '');
+        }
+      },
+      
+      safeAppend: function(element, content) {
+        if (typeof content === 'string') {
+          const span = document.createElement('span');
+          span.textContent = content;
+          element.appendChild(span);
+        }
+      }
+    };
+    
+    // Backwards compatibility
+    window.escapeHtml = window.webliskSafe.escapeHtml;
+    `;
   }
 
   /**

@@ -5,6 +5,7 @@
 
 import { type RouteContext, WebliskError } from "./types.ts";
 import { css, html, js } from "./helpers.ts";
+import { security } from "./security.ts";
 
 // Re-export helpers for convenience
 export { css, html, js };
@@ -387,6 +388,8 @@ export class WebliskRoute {
     const frameworkClientCode = js`
       // Weblisk Framework initialization
       console.log('Weblisk Framework initialized');
+
+      ${security.generateEscapeFunction()}
 
       window.WebliskApp = {
         data: ${JSON.stringify(data)},

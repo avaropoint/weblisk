@@ -74,20 +74,53 @@ jobs:
           echo "External dependencies found:"
           cat deps.txt
           
-          # Basic security checks
-          echo "=== Basic Security Checks ==="
-          echo "Checking for common security issues..."
+          # Enhanced security checks with reduced false positives
+          echo "=== Enhanced Security Checks ==="
+          echo "Checking for potential security issues..."
           
-          # Check for potential secrets in code (basic patterns)
-          if grep -r -i "password\|secret\|key\|token" lib/ src/ --include="*.ts" --exclude-dir=node_modules; then
-            echo "⚠️  Potential secrets found in code - please review"
-          else
-            echo "✅ No obvious secrets found in source code"
+          # Check for hardcoded secrets (more specific patterns)
+          SECRET_PATTERNS=(
+            "password\s*=\s*['\"][^'\"]{8,}"
+            "secret\s*=\s*['\"][^'\"]{8,}"
+            "token\s*=\s*['\"][^'\"]{16,}"
+            "api_key\s*=\s*['\"][^'\"]{16,}"
+            "private_key\s*=\s*['\"][^'\"]{20,}"
+            "access_key\s*=\s*['\"][^'\"]{16,}"
+          )
+          
+          SECRETS_FOUND=false
+          for pattern in "${SECRET_PATTERNS[@]}"; do
+            if grep -r -i -E "$pattern" lib/ src/ --include="*.ts" --exclude-dir=node_modules; then
+              SECRETS_FOUND=true
+              echo "⚠️  Potential hardcoded secret found: $pattern"
+            fi
+          done
+          
+          if [ "$SECRETS_FOUND" = false ]; then
+            echo "✅ No hardcoded secrets found"
           fi
           
-          # Check for eval usage
+          # Check for eval usage (blocking)
           if grep -r "eval(" lib/ src/ --include="*.ts"; then
             echo "⚠️  eval() usage found - potential security risk"
+            exit 1
           else
             echo "✅ No eval() usage found"
           fi
+          
+          # Check for potential XSS vulnerabilities (warning only)
+          if grep -r "innerHTML\s*=" lib/ src/ --include="*.ts"; then
+            echo "⚠️  innerHTML usage found - potential XSS risk if data is not sanitized"
+            echo "   Consider using textContent or proper escaping for user data"
+          else
+            echo "✅ No innerHTML usage found"
+          fi
+          
+          # Check for unsafe HTTP requests in production code
+          if grep -r "http://" lib/ --include="*.ts" | grep -v "localhost" | grep -v "127.0.0.1"; then
+            echo "⚠️  Unsafe HTTP URLs found in production code"
+          else
+            echo "✅ No unsafe HTTP URLs found"
+          fi
+          
+          echo "=== Security Scan Complete ==="

@@ -58,8 +58,13 @@ app.route("/", {
         window.weblisk.sendEvent('route', 'test', { message: 'Hello from client!' });
         
         window.weblisk.on('test', (data) => {
-          document.getElementById('output').innerHTML = 
-            '<strong>Server Response:</strong> ' + data.message;
+          const outputElement = document.getElementById('output');
+          if (outputElement) {
+            // Use framework's built-in safe HTML function
+            webliskSafe.safeInnerHTML(outputElement, 
+              '<strong>Server Response:</strong> ' + (data.message || '')
+            );
+          }
         });
       }
     }
@@ -70,10 +75,17 @@ app.route("/", {
   }),
 
   events: {
-    test: (data) => ({
-      message: `Received: ${data.message} - Response from server!`,
-      timestamp: new Date().toISOString(),
-    }),
+    test: (data) => {
+      // Validate and sanitize input data
+      const message = typeof data.message === "string"
+        ? data.message.slice(0, 200) // Limit length
+        : "Invalid message";
+
+      return {
+        message: "Received: " + message + " - Response from server!",
+        timestamp: new Date().toISOString(),
+      };
+    },
   },
 });
 
@@ -83,4 +95,4 @@ app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
 // Start the server
 await app.start();
 
-console.log(`🚀 Weblisk app running on ${app.getServerUrl()}`);
+console.log("🚀 Weblisk app running on " + app.getServerUrl());
