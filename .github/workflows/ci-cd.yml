@@ -25,7 +25,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: v1.45.5
+          deno-version: v2.4.5
 
       - name: Cache dependencies
         run: deno cache lib/weblisk.ts src/app.ts tests/*.ts
@@ -169,7 +169,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: v1.45.5
+          deno-version: v2.4.5
 
       - name: Start server
         run: |
