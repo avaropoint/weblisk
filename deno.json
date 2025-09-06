@@ -1,21 +1,29 @@
 {
   "name": "@avaropoint/weblisk",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A lightning-fast HTML-over-WebSocket framework for Deno",
   "exports": {
-    ".": "./lib/weblisk.ts"
+    ".": "./mod.ts",
+    "./lib": "./lib/index.ts"
   },
   "tasks": {
     "dev": "WEBLISK_DEBUG=true WEBLISK_ENV=development deno run --allow-net --allow-read --allow-write --allow-env --watch src/app.ts",
     "dev:https": "WEBLISK_DEBUG=true WEBLISK_ENV=development WEBLISK_HTTPS=true WEBLISK_CERT_PATH=./certs/localhost.crt WEBLISK_KEY_PATH=./certs/localhost.key deno run --allow-net --allow-read --allow-write --allow-env --watch src/app.ts",
     "start": "WEBLISK_ENV=production deno run --allow-net --allow-read --allow-env src/app.ts",
     "start:https": "WEBLISK_ENV=production WEBLISK_HTTPS=true WEBLISK_CERT_PATH=./certs/localhost.crt WEBLISK_KEY_PATH=./certs/localhost.key deno run --allow-net --allow-read --allow-env src/app.ts",
+    "example": "deno run --allow-net --allow-read --allow-env --watch examples/basic/app.ts",
     "certs": "deno run --allow-read --allow-write --allow-run scripts/generate-certs.ts",
     "fmt": "deno fmt",
     "lint": "deno lint",
     "test": "WEBLISK_ENV=test deno test --allow-net --allow-read --allow-env tests/",
     "test:watch": "WEBLISK_ENV=test deno test --allow-net --allow-read --allow-env --watch tests/",
-    "check": "deno check lib/weblisk.ts src/app.ts tests/*.ts"
+    "test:ci": "WEBLISK_ENV=test deno test --allow-net --allow-read --allow-env --reporter=tap tests/",
+    "check": "deno check lib/**/*.ts src/app.ts examples/**/*.ts tests/*.ts",
+    "build": "echo 'No build step required - Deno runs TypeScript directly'",
+    "docker:build": "docker build -t weblisk:latest .",
+    "docker:run": "docker run --rm -p 3000:3000 --env-file .env weblisk:latest",
+    "performance": "./scripts/performance-test.sh",
+    "deploy": "./scripts/deploy.sh"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.0",

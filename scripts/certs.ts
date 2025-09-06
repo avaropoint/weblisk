@@ -25,7 +25,7 @@ async function generateCertificates() {
     console.log(`Private Key: ${KEY_FILE}`);
 
     const overwrite = prompt("Do you want to regenerate them? (y/N): ");
-    if (overwrite?.toLowerCase() !== 'y') {
+    if (overwrite?.toLowerCase() !== "y") {
       console.log("Using existing certificates.");
       return;
     }
@@ -68,11 +68,12 @@ IP.2 = ::1
     const keyProcess = new Deno.Command("openssl", {
       args: [
         "genrsa",
-        "-out", KEY_FILE,
-        "2048"
+        "-out",
+        KEY_FILE,
+        "2048",
       ],
       stdout: "null",
-      stderr: "piped"
+      stderr: "piped",
     });
 
     const keyResult = await keyProcess.output();
@@ -88,13 +89,17 @@ IP.2 = ::1
         "req",
         "-new",
         "-x509",
-        "-key", KEY_FILE,
-        "-out", CERT_FILE,
-        "-days", "365",
-        "-config", CONFIG_FILE
+        "-key",
+        KEY_FILE,
+        "-out",
+        CERT_FILE,
+        "-days",
+        "365",
+        "-config",
+        CONFIG_FILE,
       ],
       stdout: "null",
-      stderr: "piped"
+      stderr: "piped",
     });
 
     const certResult = await certProcess.output();
@@ -114,17 +119,22 @@ IP.2 = ::1
     console.log("You can now run: deno task dev:https");
     console.log("");
     console.log("Browser Security Warning:");
-    console.log("Your browser will show a security warning for self-signed certificates.");
-    console.log("Click 'Advanced' and 'Proceed to localhost (unsafe)' to continue.");
+    console.log(
+      "Your browser will show a security warning for self-signed certificates.",
+    );
+    console.log(
+      "Click 'Advanced' and 'Proceed to localhost (unsafe)' to continue.",
+    );
     console.log("This is normal for development certificates.");
-
   } catch (error) {
     console.error("Failed to generate certificates:", error.message);
     console.log("");
     console.log("Make sure OpenSSL is installed:");
     console.log("macOS: brew install openssl");
     console.log("Ubuntu/Debian: apt-get install openssl");
-    console.log("Windows: Download from https://slproweb.com/products/Win32OpenSSL.html");
+    console.log(
+      "Windows: Download from https://slproweb.com/products/Win32OpenSSL.html",
+    );
     Deno.exit(1);
   }
 }
@@ -134,7 +144,7 @@ async function checkOpenSSL() {
     const process = new Deno.Command("openssl", {
       args: ["version"],
       stdout: "piped",
-      stderr: "null"
+      stderr: "null",
     });
 
     const result = await process.output();
@@ -151,7 +161,9 @@ async function checkOpenSSL() {
   console.log("Install OpenSSL first:");
   console.log("macOS: brew install openssl");
   console.log("Ubuntu/Debian: sudo apt-get install openssl");
-  console.log("Windows: Download from https://slproweb.com/products/Win32OpenSSL.html");
+  console.log(
+    "Windows: Download from https://slproweb.com/products/Win32OpenSSL.html",
+  );
   return false;
 }
 

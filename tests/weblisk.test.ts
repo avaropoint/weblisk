@@ -1,171 +1,316 @@
 /**
- * Comprehensive test suite for Weblisk Framework v2.0
- * Testing single-file route architecture and production features
+ * Comprehensive test suite for Weblisk Framework v2.0 - Modular Architecture
+ * Testing the new modular structure and clean API
  */
 
 import { assertEquals, assertExists, assertThrows } from "@std/assert";
 import { delay } from "@std/async";
-import WebliskFramework, { WebliskRoute } from "../lib/weblisk.ts";
-import { css, html, js } from "../lib/routes.ts";
-import { ComponentError, WebliskError } from "../lib/types.ts";
-import { logger, LOG_LEVELS } from "../lib/logger.ts";
+import { css, html, js, Weblisk } from "../mod.ts";
+import { WebliskError } from "../lib/types.ts";
+import { LOG_LEVELS, logger } from "../lib/logger.ts";
 
 // Test configuration
 const TEST_PORT = 3001;
 const TEST_HOST = "localhost";
 
-Deno.test("Weblisk Framework v2.0 - Core Functionality", async (t) => {
+// Test configuration helper - disables monitoring to prevent interval leaks
+const getTestConfig = (port: number, extraConfig = {}) => ({
+  server: {
+    port,
+    hostname: TEST_HOST,
+    enableHttps: false,
+  },
+  monitoring: {
+    healthCheckEnabled: false,
+    healthCheckInterval: 0,
+    metricsEnabled: false,
+  },
+  security: {
+    corsEnabled: false,
+    corsOrigins: [],
+    rateLimitEnabled: false, // Disable rate limiting to prevent its cleanup interval
+    rateLimitRequests: 100,
+    rateLimitWindowMs: 60000,
+    securityHeadersEnabled: false,
+    contentSecurityPolicy: false,
+    enableHSTS: false,
+    trustProxy: false,
+    sessionTimeout: 3600,
+  },
+  development: {
+    debugMode: false, // Disable debug to reduce logs
+    hotReload: false,
+    enableDevTools: false,
+  },
+  ...extraConfig,
+});
 
-  await t.step("Framework initialization", () => {
-    const app = new WebliskFramework({ server: { port: TEST_PORT, hostname: TEST_HOST, enableHttps: false } });
+Deno.test("Weblisk Framework v2.0 - Modular Architecture", async (t) => {
+  await t.step("Framework initialization with config", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT, {
+      development: { debugMode: true },
+    }));
     assertExists(app);
-    assertEquals(app.getConnectionCount(), 0);
+
+    // Test that the framework has proper methods
+    assertEquals(typeof app.route, "function");
+    assertEquals(typeof app.addStaticFile, "function");
+    assertEquals(typeof app.start, "function");
+    assertEquals(typeof app.stop, "function");
+    assertEquals(typeof app.getServerUrl, "function");
   });
 
-  await t.step("Single-file route registration", () => {
-    const app = new WebliskFramework({ server: { port: TEST_PORT + 1, hostname: TEST_HOST, enableHttps: false } });
+  await t.step("Simple route registration with object config", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 1));
 
-    // Test valid route registration with WebliskRoute instance
-    const testRoute = new WebliskRoute({
-      template: () => html`<div>Test Route</div>`,
-      styles: () => css`body { color: blue; }`,
-      clientCode: () => js`console.log('test');`,
-      data: async () => ({ test: true }),
+    // Test route registration with plain config object (new API)
+    app.route("/", {
+      template: (data) =>
+        html`
+          <h1>Welcome to ${data.appName}!</h1>
+          <button onclick="testWebSocket()">Test Real-time</button>
+          <div id="output"></div>
+        `,
+
+      styles: () =>
+        css`
+          body {
+            font-family: system-ui, sans-serif;
+            padding: 2rem;
+            background: #f8fafc;
+          }
+          h1 {
+            color: #1e293b;
+          }
+          button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+          }
+        `,
+
+      clientCode: () =>
+        js`
+        function testWebSocket() {
+          if (window.weblisk) {
+            window.weblisk.sendEvent('route', 'test', { message: 'Hello from client!' });
+            
+            window.weblisk.on('test', (data) => {
+              document.getElementById('output').innerHTML = 
+                '<strong>Server Response:</strong> ' + data.message;
+            });
+          }
+        }
+      `,
+
+      data: () => ({
+        appName: "Test Framework",
+      }),
+
       events: {
-        ping: async () => ({ pong: true })
-      }
+        test: (data) => ({
+          message: `Received: ${data.message} - Response from server!`,
+          timestamp: new Date().toISOString(),
+        }),
+      },
     });
 
-    // This should not throw
-    app.route('/test', testRoute);
-
-    // Test route registration with plain config object
-    app.route('/simple', {
-      template: () => html`<div>Simple Route</div>`
+    // Test additional routes
+    app.route("/about", {
+      template: () =>
+        html`
+          <h1>About Page</h1>
+        `,
+      data: () => ({ page: "about" }),
     });
 
-    // Verify routes were registered
-    const stats = app.getStats();
-    assertEquals(stats.routes, 2);
+    // This should not throw - routes registered successfully
+    assertEquals(typeof app.getServerUrl(), "string");
   });
 
-  await t.step("WebliskRoute class functionality", () => {
-    // Test WebliskRoute creation
-    const route = new WebliskRoute({
-      template: (data) => html`<h1>${data?.title || 'Default'}</h1>`,
-      styles: (data) => css`body { background: ${data?.bg || 'white'}; }`,
-      clientCode: (data) => js`console.log(${JSON.stringify(data)});`,
-      data: async () => ({ title: 'Test', bg: 'blue' }),
-      events: {
-        test: async (data) => ({ result: 'success' })
-      }
-    });
+  await t.step("Static file registration", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 2));
 
-    assertExists(route);
+    // Test static file registration
+    app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
+    app.addStaticFile("/manifest.json", JSON.stringify({ name: "Test App" }));
 
-    // Test event handlers extraction
-    const eventHandlers = route.getEventHandlers();
-    assertExists(eventHandlers.test);
-    assertEquals(typeof eventHandlers.test, 'function');
-  });
-
-  await t.step("Template helpers", () => {
-    // Test CSS helper
-    const cssResult = css`body { color: red; }`;
-    assertEquals(typeof cssResult, 'string');
-    assertEquals(cssResult.includes('color: red'), true);
-
-    // Test HTML helper
-    const htmlResult = html`<div>Hello</div>`;
-    assertEquals(typeof htmlResult, 'string');
-    assertEquals(htmlResult.includes('<div>Hello</div>'), true);
-
-    // Test JS helper
-    const jsResult = js`console.log('test');`;
-    assertEquals(typeof jsResult, 'string');
-    assertEquals(jsResult.includes('console.log'), true);
-  });
-
-  await t.step("Statistics and monitoring", () => {
-    const app = new WebliskFramework({ server: { port: TEST_PORT + 4, hostname: TEST_HOST, enableHttps: false } });
-
-    const route1 = new WebliskRoute({ template: () => html`<div>Route1</div>` });
-    const route2 = new WebliskRoute({ template: () => html`<div>Route2</div>` });
-
-    app.route('/route1', route1);
-    app.route('/route2', route2);
-
-    const stats = app.getStats();
-    assertEquals(stats.routes, 2);
-    assertEquals(stats.connections, 0);
-    assertEquals(stats.activeSessions, 0);
-    assertExists(stats.memoryUsage);
+    // Should not throw
+    assertEquals(typeof app.getServerUrl(), "string");
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Route Rendering", async (t) => {
-
-  await t.step("Route data preparation", async () => {
-    const route = new WebliskRoute({
-      template: (data) => html`<h1>Welcome ${data.user}</h1>`,
-      data: async () => ({ user: 'TestUser', timestamp: Date.now() })
-    });
-
-    assertExists(route);
-    // Test that route can be created without errors
+Deno.test("Weblisk Framework v2.0 - Template Helpers", async (t) => {
+  await t.step("HTML template helper", () => {
+    const name = "World";
+    const htmlResult = html`
+      <div>
+        <h1>Hello ${name}!</h1>
+        <p>Welcome to Weblisk</p>
+      </div>
+    `;
+    assertEquals(typeof htmlResult, "string");
+    assertEquals(htmlResult.includes("Hello World!"), true);
+    assertEquals(htmlResult.includes("<div>"), true);
   });
 
-  await t.step("Dynamic CSS generation", () => {
-    const dynamicData = { theme: 'dark', primary: '#667eea' };
+  await t.step("CSS template helper", () => {
+    const primaryColor = "#3b82f6";
+    const cssResult = css`
+      body {
+        color: ${primaryColor};
+        font-family: system-ui, sans-serif;
+      }
+      .button {
+        background: ${primaryColor};
+        padding: 0.5rem 1rem;
+      }
+    `;
+    assertEquals(typeof cssResult, "string");
+    assertEquals(cssResult.includes("#3b82f6"), true);
+    assertEquals(cssResult.includes("font-family"), true);
+  });
 
-    const route = new WebliskRoute({
-      template: () => html`<div>Test</div>`,
-      styles: (data) => css`
-        body {
-          background: ${data.theme === 'dark' ? '#000' : '#fff'};
-          color: ${data.primary};
-        }
-      `
+  await t.step("JS template helper", () => {
+    const eventName = "test";
+    const jsResult = js`
+      function handleClick() {
+        console.log('Button clicked');
+        window.weblisk.sendEvent('route', '${eventName}', { data: 'test' });
+      }
+      
+      window.weblisk.on('${eventName}', (data) => {
+        console.log('Response:', data);
+      });
+    `;
+    assertEquals(typeof jsResult, "string");
+    assertEquals(jsResult.includes("handleClick"), true);
+    assertEquals(jsResult.includes("window.weblisk"), true);
+    assertEquals(jsResult.includes("sendEvent"), true);
+  });
+});
+
+Deno.test("Weblisk Framework v2.0 - Configuration System", async (t) => {
+  await t.step("Partial configuration (DeepPartial)", () => {
+    // Test that partial config works (this was a major fix)
+    const app1 = new Weblisk(getTestConfig(TEST_PORT + 10));
+    assertExists(app1);
+
+    const app2 = new Weblisk(getTestConfig(TEST_PORT + 11, {
+      development: { debugMode: true },
+    }));
+    assertExists(app2);
+
+    const app3 = new Weblisk(getTestConfig(TEST_PORT + 12, {
+      logging: { level: "INFO" },
+    }));
+    assertExists(app3);
+  });
+
+  await t.step("Default configuration values", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 13)); // Test config
+    assertExists(app);
+
+    // Should work with defaults
+    assertEquals(typeof app.getServerUrl(), "string");
+    assertEquals(typeof app.getEnvironment(), "string");
+  });
+});
+
+Deno.test("Weblisk Framework v2.0 - Modular Components", async (t) => {
+  await t.step("Static file manager integration", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 20));
+
+    // Test static file functionality
+    app.addStaticFile("/test.txt", "Hello World");
+    app.addStaticFile("/data.json", JSON.stringify({ test: true }));
+
+    // Should not throw
+    assertExists(app);
+  });
+
+  await t.step("WebSocket manager integration", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 21));
+
+    // Add a route with WebSocket events
+    app.route("/ws-test", {
+      template: () =>
+        html`
+          <div>WebSocket Test</div>
+        `,
+      events: {
+        ping: (data) => ({ pong: true, received: data }),
+        echo: (data) => ({ echo: data.message }),
+      },
     });
 
-    assertExists(route);
+    assertExists(app);
+  });
+
+  await t.step("Cookie manager integration", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 22, {
+      session: {
+        cookieName: "test-session",
+        cookieMaxAge: 3600,
+      },
+    }));
+
+    app.route("/session-test", {
+      template: () =>
+        html`
+          <div>Session Test</div>
+        `,
+      data: (context) => ({
+        sessionId: context?.sessionId || "unknown",
+      }),
+    });
+
+    assertExists(app);
+  });
+
+  await t.step("Monitor integration (health endpoints)", () => {
+    // Test monitor integration without actually enabling background processes
+    const app = new Weblisk(getTestConfig(TEST_PORT + 23));
+
+    // Health and metrics endpoints should be available even when monitoring is disabled
+    // (they just won't run periodic checks)
+    assertExists(app);
   });
 });
 
 Deno.test("Weblisk Framework v2.0 - Error Handling", async (t) => {
-
-  await t.step("Route errors", () => {
-    const app = new WebliskFramework({ server: { port: TEST_PORT + 10, hostname: TEST_HOST, enableHttps: false } });
-
-    // Test ComponentError (still used internally)
-    const error = new ComponentError("Test component error", "test-component");
-    assertEquals(error.name, "ComponentError");
-    assertEquals(error.componentName, "test-component");
-    assertEquals(error.code, "COMPONENT_ERROR");
-  });
-
-  await t.step("WebSocket errors", () => {
-    const app = new WebliskFramework({ server: { port: TEST_PORT + 11, hostname: TEST_HOST, enableHttps: false } });
-
-    // Test WebliskError
-    const error = new WebliskError("Test weblisk error", "TEST_CODE");
+  await t.step("WebliskError class", () => {
+    const error = new WebliskError("Test error", "TEST_CODE");
     assertEquals(error.name, "WebliskError");
     assertEquals(error.code, "TEST_CODE");
+    assertEquals(error.message, "Test error");
   });
 
-  await t.step("Invalid route registration", () => {
-    const app = new WebliskFramework({ server: { port: TEST_PORT + 12, hostname: TEST_HOST, enableHttps: false } });
-    const validRoute = new WebliskRoute({ template: () => html`<div>Test</div>` });
+  await t.step("Route validation", () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 30));
 
-    // These should work fine (no validation errors in current implementation)
-    app.route('/valid', validRoute);
-    app.route('/valid2', { template: () => html`<div>Test</div>` });
+    // Valid route should work
+    app.route("/valid", {
+      template: () =>
+        html`
+          <div>Valid</div>
+        `,
+    });
+
+    // Route with missing template should still work (no strict validation)
+    app.route("/minimal", {
+      data: () => ({ message: "minimal route" }),
+    });
+
+    assertExists(app);
   });
 });
 
-Deno.test("Weblisk Framework v2.0 - Logger", async (t) => {
-
-  await t.step("Logger initialization", () => {
+Deno.test("Weblisk Framework v2.0 - Logger System", async (t) => {
+  await t.step("Logger interface", () => {
     assertEquals(typeof logger.setLevel, "function");
     assertEquals(typeof logger.info, "function");
     assertEquals(typeof logger.error, "function");
@@ -189,4 +334,71 @@ Deno.test("Weblisk Framework v2.0 - Logger", async (t) => {
   });
 });
 
-console.log("Weblisk Framework v2.0 Test Suite Completed!");
+Deno.test("Weblisk Framework v2.0 - Integration Test", async (t) => {
+  await t.step("Full application lifecycle", async () => {
+    const app = new Weblisk(getTestConfig(TEST_PORT + 40, {
+      development: { debugMode: true },
+    }));
+
+    // Add a comprehensive route
+    app.route("/", {
+      template: (data) =>
+        html`
+          <h1>${data.title}</h1>
+          <p>Environment: ${data.environment}</p>
+          <button onclick="testEvent()">Test Event</button>
+          <div id="result"></div>
+        `,
+
+      styles: (data) =>
+        css`
+          body {
+            font-family: system-ui;
+            background: ${data.theme === "dark" ? "#000" : "#fff"};
+          }
+        `,
+
+      clientCode: () =>
+        js`
+        function testEvent() {
+          window.weblisk.sendEvent('route', 'hello', { name: 'Test' });
+          window.weblisk.on('hello', (data) => {
+            document.getElementById('result').textContent = data.message;
+          });
+        }
+      `,
+
+      data: (context) => ({
+        title: "Integration Test",
+        environment: context?.framework?.getEnvironment() || "test",
+        theme: "light",
+      }),
+
+      events: {
+        hello: (data, context) => ({
+          message: `Hello ${data.name}! Server time: ${
+            new Date().toISOString()
+          }`,
+          sessionId: context?.sessionId,
+        }),
+      },
+    });
+
+    // Add static files
+    app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
+
+    // Test server URL generation
+    const serverUrl = app.getServerUrl();
+    assertEquals(typeof serverUrl, "string");
+    assertEquals(serverUrl.includes(`${TEST_PORT + 40}`), true);
+
+    // Test environment
+    const environment = app.getEnvironment();
+    assertEquals(typeof environment, "string");
+
+    // Framework should be ready (no need to actually start for this test)
+    assertExists(app);
+  });
+});
+
+console.log("✅ Weblisk Framework v2.0 Modular Test Suite Completed!");

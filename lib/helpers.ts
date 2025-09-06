@@ -7,30 +7,39 @@
  * HTML template literal helper - enables syntax highlighting in IDEs
  * Usage: html`<div>Hello ${name}</div>`
  */
-export function html(strings: TemplateStringsArray, ...values: unknown[]): string {
+export function html(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): string {
   return strings.reduce((result, string, i) => {
-    return result + string + (values[i] ?? '');
-  }, '');
+    return result + string + (values[i] ?? "");
+  }, "");
 }
 
 /**
  * CSS template literal helper - enables syntax highlighting in IDEs
  * Usage: css`body { color: red; }`
  */
-export function css(strings: TemplateStringsArray, ...values: unknown[]): string {
+export function css(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): string {
   return strings.reduce((result, string, i) => {
-    return result + string + (values[i] ?? '');
-  }, '');
+    return result + string + (values[i] ?? "");
+  }, "");
 }
 
 /**
  * JavaScript template literal helper - enables syntax highlighting in IDEs
  * Usage: js`console.log('Hello')`
  */
-export function js(strings: TemplateStringsArray, ...values: unknown[]): string {
+export function js(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): string {
   return strings.reduce((result, string, i) => {
-    return result + string + (values[i] ?? '');
-  }, '');
+    return result + string + (values[i] ?? "");
+  }, "");
 }
 
 /**
@@ -39,25 +48,42 @@ export function js(strings: TemplateStringsArray, ...values: unknown[]): string 
  *        element('custom-element', { 'data-id': 123 }, child1, child2)
  */
 export function element(
-  tag: string, 
-  attributes?: Record<string, string | number | boolean | null | undefined> | null,
+  tag: string,
+  attributes?:
+    | Record<string, string | number | boolean | null | undefined>
+    | null,
   ...children: (string | number | null | undefined)[]
 ): string {
-  const attrs = attributes ? 
-    Object.entries(attributes)
+  const attrs = attributes
+    ? Object.entries(attributes)
       .filter(([_, value]) => value != null)
       .map(([key, value]) => `${key}="${String(value)}"`)
-      .join(' ') : '';
-  
-  const attrString = attrs ? ` ${attrs}` : '';
-  const content = children.filter(child => child != null).join('');
-  
+      .join(" ")
+    : "";
+
+  const attrString = attrs ? ` ${attrs}` : "";
+  const content = children.filter((child) => child != null).join("");
+
   // Handle self-closing tags
-  const selfClosingTags = ['input', 'img', 'br', 'hr', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr'];
+  const selfClosingTags = [
+    "input",
+    "img",
+    "br",
+    "hr",
+    "meta",
+    "link",
+    "area",
+    "base",
+    "col",
+    "embed",
+    "source",
+    "track",
+    "wbr",
+  ];
   if (selfClosingTags.includes(tag.toLowerCase())) {
     return `<${tag}${attrString}>`;
   }
-  
+
   return `<${tag}${attrString}>${content}</${tag}>`;
 }
 
@@ -71,22 +97,30 @@ export function style(config: {
   rules: Record<string, string | number | Record<string, string | number>>;
 }): string {
   const { selector, rules } = config;
-  
-  const formatRules = (ruleSet: Record<string, string | number | Record<string, string | number>>, indent = ''): string => {
+
+  const formatRules = (
+    ruleSet: Record<string, string | number | Record<string, string | number>>,
+    indent = "",
+  ): string => {
     return Object.entries(ruleSet)
       .map(([key, value]) => {
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
           // Nested rules (like media queries or nested selectors)
-          return `${indent}${key} {\n${formatRules(value as Record<string, string | number>, indent + '  ')}\n${indent}}`;
+          return `${indent}${key} {\n${
+            formatRules(value as Record<string, string | number>, indent + "  ")
+          }\n${indent}}`;
         } else {
           // Convert camelCase to kebab-case for CSS properties
-          const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+          const cssKey = key.replace(
+            /[A-Z]/g,
+            (letter) => `-${letter.toLowerCase()}`,
+          );
           return `${indent}  ${cssKey}: ${value};`;
         }
       })
-      .join('\n');
+      .join("\n");
   };
-  
+
   return `${selector} {\n${formatRules(rules)}\n}`;
 }
 
@@ -100,7 +134,7 @@ export interface ComponentTemplate {
 }
 
 export function component(template: ComponentTemplate): string {
-  const styles = template.styles ? `<style>${template.styles}</style>` : '';
+  const styles = template.styles ? `<style>${template.styles}</style>` : "";
   return `${styles}${template.template}`;
 }
 
@@ -111,23 +145,34 @@ export function component(template: ComponentTemplate): string {
  *        tag.h1({ class: 'title' }, 'My Title')
  */
 type TagFunction = (
-  attributes?: Record<string, string | number | boolean | null | undefined> | string | number | null,
+  attributes?:
+    | Record<string, string | number | boolean | null | undefined>
+    | string
+    | number
+    | null,
   ...children: (string | number | null | undefined)[]
 ) => string;
 
 export const tag = new Proxy({} as Record<string, TagFunction>, {
   get: (_, tagName: string) => {
     return (
-      attributes?: Record<string, string | number | boolean | null | undefined> | string | number | null,
+      attributes?:
+        | Record<string, string | number | boolean | null | undefined>
+        | string
+        | number
+        | null,
       ...children: (string | number | null | undefined)[]
     ) => {
       // If first argument is a string/number, treat it as content with no attributes
-      if (typeof attributes === 'string' || typeof attributes === 'number' || attributes == null) {
+      if (
+        typeof attributes === "string" || typeof attributes === "number" ||
+        attributes == null
+      ) {
         return element(tagName, null, attributes, ...children);
       }
       return element(tagName, attributes, ...children);
     };
-  }
+  },
 });
 
 /**
@@ -135,7 +180,7 @@ export const tag = new Proxy({} as Record<string, TagFunction>, {
  * Usage: styles(style1, style2, style3)
  */
 export function styles(...styleStrings: (string | null | undefined)[]): string {
-  return styleStrings.filter(Boolean).join('\n\n');
+  return styleStrings.filter(Boolean).join("\n\n");
 }
 
 /**
@@ -145,9 +190,9 @@ export function styles(...styleStrings: (string | null | undefined)[]): string {
  *        on('customEvent', js`handleCustom(event)`)
  */
 export function on(eventName: string, jsCode: string): Record<string, string> {
-  const eventAttr = eventName.startsWith('on') ? eventName : `on${eventName}`;
+  const eventAttr = eventName.startsWith("on") ? eventName : `on${eventName}`;
   return {
-    [eventAttr]: jsCode.replace(/"/g, '&quot;')
+    [eventAttr]: jsCode.replace(/"/g, "&quot;"),
   };
 }
 
@@ -155,10 +200,12 @@ export function on(eventName: string, jsCode: string): Record<string, string> {
  * Multiple event handlers helper
  * Usage: events({ click: 'handleClick()', mouseover: 'handleHover()' })
  */
-export function events(handlers: Record<string, string>): Record<string, string> {
+export function events(
+  handlers: Record<string, string>,
+): Record<string, string> {
   return Object.entries(handlers).reduce((acc, [event, handler]) => {
-    const eventAttr = event.startsWith('on') ? event : `on${event}`;
-    acc[eventAttr] = handler.replace(/"/g, '&quot;');
+    const eventAttr = event.startsWith("on") ? event : `on${event}`;
+    acc[eventAttr] = handler.replace(/"/g, "&quot;");
     return acc;
   }, {} as Record<string, string>);
 }
@@ -167,7 +214,9 @@ export function events(handlers: Record<string, string>): Record<string, string>
  * Data attribute helper
  * Usage: data({ id: 123, name: 'test' }) -> 'data-id="123" data-name="test"'
  */
-export function data(attributes: Record<string, string | number | boolean>): Record<string, string> {
+export function data(
+  attributes: Record<string, string | number | boolean>,
+): Record<string, string> {
   return Object.entries(attributes).reduce((acc, [key, value]) => {
     acc[`data-${key}`] = String(value);
     return acc;
@@ -183,16 +232,16 @@ export function classes(
 ): string {
   return args
     .filter(Boolean)
-    .map(arg => {
-      if (typeof arg === 'string') return arg;
-      if (typeof arg === 'object' && arg !== null) {
+    .map((arg) => {
+      if (typeof arg === "string") return arg;
+      if (typeof arg === "object" && arg !== null) {
         return Object.entries(arg)
           .filter(([_, condition]) => condition)
           .map(([className]) => className)
-          .join(' ');
+          .join(" ");
       }
-      return '';
+      return "";
     })
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 }

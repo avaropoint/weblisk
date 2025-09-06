@@ -41,30 +41,30 @@ export interface SetSessionMessage extends WebliskMessage {
 }
 
 // Union type for all possible WebSocket messages
-export type WebSocketMessage = 
-  | ServerEventMessage 
-  | ComponentInitMessage 
-  | EventResultMessage 
+export type WebSocketMessage =
+  | ServerEventMessage
+  | ComponentInitMessage
+  | EventResultMessage
   | BroadcastMessage
   | SetSessionMessage;
 
 // 📄 Single-file route configuration
 export interface RouteConfig {
   // Dynamic styles with server data access
-  styles?: (data: any) => string;
-  
+  styles?: (data: Record<string, unknown>) => string;
+
   // Server-rendered HTML template
-  template: (data: any) => string;
-  
+  template: (data: Record<string, unknown>) => string;
+
   // Client-side enhancement code
-  clientCode?: (data: any) => string;
-  
+  clientCode?: (data: Record<string, unknown>) => string;
+
   // Server-side data preparation
-  data?: (context: RouteContext) => Promise<any> | any;
-  
+  data?: (context: RouteContext) => Promise<Record<string, unknown>> | Record<string, unknown>;
+
   // WebSocket event handlers
-  events?: Record<string, (data: any, context: any) => Promise<any> | any>;
-  
+  events?: Record<string, (data: Record<string, unknown>, context: ComponentContext) => Promise<unknown> | unknown>;
+
   // Route metadata
   meta?: {
     title?: string;
@@ -77,7 +77,7 @@ export interface RouteConfig {
 export interface RouteContext {
   request: Request;
   url: URL;
-  framework: any; // WebliskFramework interface
+  framework: WebliskFramework; // WebliskFramework interface
   sessionId?: string;
 }
 
@@ -99,7 +99,7 @@ export interface ComponentDefinition {
 
 export interface WebSocketConnection {
   id: string;
-  sessionId?: string;
+  sessionId: string; // Made required since all connections need sessions
   socket: WebSocket;
   send(data: unknown): void;
 }
@@ -107,13 +107,18 @@ export interface WebSocketConnection {
 // Framework interface for better separation
 export interface WebliskFramework {
   component(name: string, definition: ComponentDefinition): WebliskFramework;
-  route(path: string, routeConfig: RouteConfig): WebliskFramework;
+  route(path: string, routeConfig: RouteConfig | ((request: Request) => Response | Promise<Response>)): WebliskFramework;
   discoverRoutes(routesDir: string): Promise<WebliskFramework>;
   start(): Promise<void>;
+  stop(): Promise<void>;
   broadcast(message: unknown): void;
   broadcastToSession(sessionId: string, message: unknown): void;
   getConnectionsBySessionId(sessionId: string): WebSocketConnection[];
-  getRouteInfo(): Record<string, any>;
+  getRouteInfo(): Record<string, Record<string, unknown>>;
+  addStaticFile(path: string, content: string, contentType?: string): void;
+  loadStaticFiles(directory: string): Promise<void>;
+  getServerUrl(): string;
+  getEnvironment(): string;
 }
 
 // Client-side window extensions
@@ -125,11 +130,15 @@ export interface WebliskWindow {
   getSessionId(): string;
   getData(key: string): unknown;
   setData(key: string, value: unknown): void;
-  sendEvent(component: string, event: string, data: Record<string, unknown>): void;
+  sendEvent(
+    component: string,
+    event: string,
+    data: Record<string, unknown>,
+  ): void;
   onEvent(event: string, handler: (data: unknown) => void): void;
-  css(strings: TemplateStringsArray, ...values: any[]): string;
-  html(strings: TemplateStringsArray, ...values: any[]): string;
-  js(strings: TemplateStringsArray, ...values: any[]): string;
+  css(strings: TemplateStringsArray, ...values: unknown[]): string;
+  html(strings: TemplateStringsArray, ...values: unknown[]): string;
+  js(strings: TemplateStringsArray, ...values: unknown[]): string;
   weblisk: WebliskClient;
 }
 
@@ -148,7 +157,7 @@ export class WebliskError extends Error {
   constructor(
     message: string,
     public code?: string,
-    public context?: Record<string, unknown>
+    public context?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "WebliskError";
@@ -159,7 +168,7 @@ export class ComponentError extends WebliskError {
   constructor(
     message: string,
     public componentName: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "COMPONENT_ERROR", { componentName, ...context });
     this.name = "ComponentError";
@@ -170,7 +179,7 @@ export class ConnectionError extends WebliskError {
   constructor(
     message: string,
     public connectionId: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "CONNECTION_ERROR", { connectionId, ...context });
     this.name = "ConnectionError";
@@ -181,7 +190,7 @@ export class ServerError extends WebliskError {
   constructor(
     message: string,
     public port?: number,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
   ) {
     super(message, "SERVER_ERROR", { port, ...context });
     this.name = "ServerError";
@@ -190,7 +199,7 @@ export class ServerError extends WebliskError {
 
 // Framework interface
 export interface IWebliskFramework {
-  route(path: string, routeConfig: IRouteConfig | any): IWebliskFramework;
+  route(path: string, routeConfig: RouteConfig | ((request: Request) => Response | Promise<Response>)): IWebliskFramework;
   addStaticFile(path: string, content: string, contentType?: string): void;
   loadStaticFiles(directory: string): Promise<void>;
   start(): Promise<void>;
@@ -204,5 +213,9 @@ export interface Logger {
   debug(message: string, context?: Record<string, unknown>): void;
   info(message: string, context?: Record<string, unknown>): void;
   warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, error?: Error, context?: Record<string, unknown>): void;
+  error(
+    message: string,
+    error?: Error,
+    context?: Record<string, unknown>,
+  ): void;
 }

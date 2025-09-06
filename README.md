@@ -46,63 +46,66 @@ your-project/
 
 ```typescript
 // src/routes/hello.ts
-import { WebliskRoute, css, html, js } from "../../lib/weblisk.ts";
+import { css, html, js, WebliskRoute } from "../../lib/weblisk.ts";
 
 export default new WebliskRoute({
   // 🎨 Dynamic CSS with JavaScript power
-  styles: (data) => css`
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: linear-gradient(
-        135deg,
-        ${data.theme.primary},
-        ${data.theme.secondary}
-      );
-      color: white;
-      padding: 2rem;
-      min-height: 100vh;
-    }
+  styles: (data) =>
+    css`
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(
+          135deg,
+          ${data.theme.primary},
+          ${data.theme.secondary}
+        );
+        color: white;
+        padding: 2rem;
+        min-height: 100vh;
+      }
 
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 2rem;
-      border-radius: 12px;
-      backdrop-filter: blur(20px);
-    }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        border-radius: 12px;
+        backdrop-filter: blur(20px);
+      }
 
-    .btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
+      .btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
 
-    .btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
-    }
-  `,
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+    `,
 
   // 🏗️ Server-rendered HTML template
-  template: (data) => html`
-    <div class="container">
-      <h1>🚀 ${data.title}</h1>
-      <p>Welcome ${data.user.name}! Current time: ${data.currentTime}</p>
+  template: (data) =>
+    html`
+      <div class="container">
+        <h1>🚀 ${data.title}</h1>
+        <p>Welcome ${data.user.name}! Current time: ${data.currentTime}</p>
 
-      <button class="btn" data-action="greet">Say Hello</button>
-      <button class="btn" data-action="time">Get Time</button>
+        <button class="btn" data-action="greet">Say Hello</button>
+        <button class="btn" data-action="time">Get Time</button>
 
-      <div id="output" style="margin-top: 2rem;"></div>
-    </div>
-  `,
+        <div id="output" style="margin-top: 2rem;"></div>
+      </div>
+    `,
 
   // ⚡ Client-side enhancement
-  clientCode: (data) => js`
+  clientCode: (data) =>
+    js`
     console.log('Route enhanced with data:', ${JSON.stringify(data)});
 
     // Setup interactions
@@ -152,9 +155,9 @@ export default new WebliskRoute({
     greet: async (data, context) => {
       return {
         action: "Greeting",
-        message: `Hello ${
-          data.user.name
-        }! Server time: ${new Date().toLocaleString()}`,
+        message: `Hello ${data.user.name}! Server time: ${
+          new Date().toLocaleString()
+        }`,
         success: true,
       };
     },
@@ -222,29 +225,30 @@ Each route is a complete, self-contained file with:
 Style your components dynamically using server data:
 
 ```typescript
-styles: (data) => css`
-  :root {
-    --primary: ${data.user.theme.primary};
-    --bg: ${data.user.darkMode ? "#1a1a1a" : "#ffffff"};
-  }
+styles: ((data) =>
+  css`
+    :root {
+      --primary: ${data.user.theme.primary};
+      --bg: ${data.user.darkMode ? "#1a1a1a" : "#ffffff"};
+    }
 
-  .container {
-    background: var(--bg);
-    border: 2px solid var(--primary);
-    display: grid;
-    grid-template-columns: ${data.posts.length > 5
-      ? "repeat(3, 1fr)"
-      : "repeat(2, 1fr)"};
-  }
+    .container {
+      background: var(--bg);
+      border: 2px solid var(--primary);
+      display: grid;
+      grid-template-columns: ${data.posts.length > 5
+        ? "repeat(3, 1fr)"
+        : "repeat(2, 1fr)"};
+    }
 
-  ${data.user.isVip
-    ? css`
+    ${data.user.isVip
+      ? css`
         .header {
           background: gold;
         }
       `
-    : ""}
-`;
+      : ""};
+  `);
 ```
 
 ### True SSR + WebSocket Enhancement
@@ -310,7 +314,7 @@ deno task test
 Weblisk v1.0 includes powerful template helpers:
 
 ```typescript
-import { css, html, js, styles, createTheme } from "../lib/weblisk.ts";
+import { createTheme, css, html, js, styles } from "../lib/weblisk.ts";
 
 // CSS with JavaScript power
 const dynamicStyles = css`

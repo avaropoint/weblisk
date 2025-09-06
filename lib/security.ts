@@ -4,13 +4,13 @@
  */
 
 export interface SecurityHeaders {
-  'Content-Security-Policy'?: string;
-  'X-Frame-Options'?: string;
-  'X-Content-Type-Options'?: string;
-  'X-XSS-Protection'?: string;
-  'Strict-Transport-Security'?: string;
-  'Referrer-Policy'?: string;
-  'Permissions-Policy'?: string;
+  "Content-Security-Policy"?: string;
+  "X-Frame-Options"?: string;
+  "X-Content-Type-Options"?: string;
+  "X-XSS-Protection"?: string;
+  "Strict-Transport-Security"?: string;
+  "Referrer-Policy"?: string;
+  "Permissions-Policy"?: string;
 }
 
 export interface RateLimitConfig {
@@ -22,24 +22,27 @@ export interface RateLimitConfig {
 }
 
 export class WebliskSecurity {
-  private rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+  private rateLimitMap = new Map<
+    string,
+    { count: number; resetTime: number }
+  >();
 
   /**
    * Get security headers based on environment
    */
   getSecurityHeaders(isProduction: boolean): SecurityHeaders {
     const baseHeaders: SecurityHeaders = {
-      'X-Frame-Options': 'DENY',
-      'X-Content-Type-Options': 'nosniff',
-      'X-XSS-Protection': '1; mode=block',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+      "X-Frame-Options": "DENY",
+      "X-Content-Type-Options": "nosniff",
+      "X-XSS-Protection": "1; mode=block",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     };
 
     if (isProduction) {
       const headers: SecurityHeaders = {
         ...baseHeaders,
-        'Content-Security-Policy': [
+        "Content-Security-Policy": [
           "default-src 'self'",
           "script-src 'self' 'unsafe-inline'", // Note: 'unsafe-inline' needed for framework JS
           "style-src 'self' 'unsafe-inline'",
@@ -48,8 +51,8 @@ export class WebliskSecurity {
           "font-src 'self'",
           "object-src 'none'",
           "base-uri 'self'",
-          "form-action 'self'"
-        ].join('; ')
+          "form-action 'self'",
+        ].join("; "),
       };
 
       // Only add HSTS over HTTPS
@@ -60,15 +63,15 @@ export class WebliskSecurity {
     // Development headers (more permissive)
     return {
       ...baseHeaders,
-      'Content-Security-Policy': [
+      "Content-Security-Policy": [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
         "style-src 'self' 'unsafe-inline'",
         "connect-src 'self' ws: wss:",
         "img-src 'self' data: https: http:",
         "font-src 'self'",
-        "object-src 'none'"
-      ].join('; ')
+        "object-src 'none'",
+      ].join("; "),
     };
   }
 
@@ -76,9 +79,9 @@ export class WebliskSecurity {
    * Rate limiting middleware
    */
   checkRateLimit(request: Request, config: RateLimitConfig): boolean {
-    const key = config.keyGenerator ? 
-      config.keyGenerator(request) : 
-      this.getClientIP(request);
+    const key = config.keyGenerator
+      ? config.keyGenerator(request)
+      : this.getClientIP(request);
 
     const now = Date.now();
     const entry = this.rateLimitMap.get(key);
@@ -87,7 +90,7 @@ export class WebliskSecurity {
       // Reset or create new entry
       this.rateLimitMap.set(key, {
         count: 1,
-        resetTime: now + config.windowMs
+        resetTime: now + config.windowMs,
       });
       return true;
     }
@@ -105,12 +108,12 @@ export class WebliskSecurity {
    */
   private getClientIP(request: Request): string {
     // Check various headers for real IP
-    const forwardedFor = request.headers.get('X-Forwarded-For');
-    const realIP = request.headers.get('X-Real-IP');
-    const cfConnectingIP = request.headers.get('CF-Connecting-IP');
+    const forwardedFor = request.headers.get("X-Forwarded-For");
+    const realIP = request.headers.get("X-Real-IP");
+    const cfConnectingIP = request.headers.get("CF-Connecting-IP");
 
     if (forwardedFor) {
-      return forwardedFor.split(',')[0].trim();
+      return forwardedFor.split(",")[0].trim();
     }
     if (realIP) {
       return realIP;
@@ -120,7 +123,7 @@ export class WebliskSecurity {
     }
 
     // Fallback to connection info (may not be available in all environments)
-    return 'unknown';
+    return "unknown";
   }
 
   /**
@@ -128,31 +131,31 @@ export class WebliskSecurity {
    */
   validateCorsOrigin(origin: string | null, allowedOrigins: string[]): boolean {
     if (!origin) return false;
-    if (allowedOrigins.includes('*')) return true;
+    if (allowedOrigins.includes("*")) return true;
     return allowedOrigins.includes(origin);
   }
 
   /**
    * Sanitize user input to prevent injection attacks
    */
-  sanitizeInput(input: any): any {
-    if (typeof input === 'string') {
+  sanitizeInput(input: unknown): unknown {
+    if (typeof input === "string") {
       // Basic HTML encoding
       return input
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;')
-        .replace(/\//g, '&#x2F;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;")
+        .replace(/\//g, "&#x2F;");
     }
 
     if (Array.isArray(input)) {
-      return input.map(item => this.sanitizeInput(item));
+      return input.map((item) => this.sanitizeInput(item));
     }
 
-    if (typeof input === 'object' && input !== null) {
-      const sanitized: any = {};
+    if (typeof input === "object" && input !== null) {
+      const sanitized: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(input)) {
         sanitized[key] = this.sanitizeInput(value);
       }
@@ -175,7 +178,8 @@ export class WebliskSecurity {
    */
   isValidSessionId(sessionId: string): boolean {
     // UUID v4 format validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(sessionId);
   }
 
@@ -192,4 +196,4 @@ export class WebliskSecurity {
   }
 }
 
-export const security = new WebliskSecurity();
+export const security: WebliskSecurity = new WebliskSecurity();

@@ -3,6 +3,11 @@
  * Provides environment-based configuration with validation
  */
 
+// Deep partial type for nested config objects
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
 export interface WebliskConfig {
   // Server configuration
   server: {
@@ -15,8 +20,8 @@ export interface WebliskConfig {
 
   // Logging configuration
   logging: {
-    level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
-    format: 'json' | 'text';
+    level: "DEBUG" | "INFO" | "WARN" | "ERROR";
+    format: "json" | "text";
     enableColors: boolean;
     enableTimestamp: boolean;
     logFile?: string;
@@ -36,7 +41,7 @@ export interface WebliskConfig {
     cookieMaxAge: number;
     cookieName: string;
     cookieSecure: boolean;
-    cookieSameSite: 'Strict' | 'Lax' | 'None';
+    cookieSameSite: "Strict" | "Lax" | "None";
   };
 
   // Security configuration
@@ -77,15 +82,15 @@ export const defaultConfig: WebliskConfig = {
   },
 
   logging: {
-    level: 'INFO',
-    format: 'text',
+    level: "INFO",
+    format: "text",
     enableColors: true,
     enableTimestamp: true,
   },
 
   websocket: {
     pingInterval: 30000, // 30 seconds
-    pongTimeout: 5000,   // 5 seconds
+    pongTimeout: 5000, // 5 seconds
     maxConnections: 1000,
     compressionEnabled: true,
     reconnectInterval: 3000, // 3 seconds for client reconnection
@@ -93,9 +98,9 @@ export const defaultConfig: WebliskConfig = {
 
   session: {
     cookieMaxAge: 60 * 60 * 24 * 7, // 7 days instead of 30
-    cookieName: 'weblisk-session-id',
+    cookieName: "weblisk-session-id",
     cookieSecure: false, // Auto-enabled when HTTPS is enabled
-    cookieSameSite: 'Lax',
+    cookieSameSite: "Lax",
   },
 
   security: {
@@ -115,7 +120,7 @@ export const defaultConfig: WebliskConfig = {
     healthCheckEnabled: true,
     healthCheckInterval: 30000, // 30 seconds
     metricsEnabled: false,
-    metricsEndpoint: '/metrics',
+    metricsEndpoint: "/metrics",
   },
 
   development: {
@@ -128,7 +133,7 @@ export const defaultConfig: WebliskConfig = {
 export class WebliskConfigManager {
   private config: WebliskConfig;
 
-  constructor(userConfig: Partial<WebliskConfig> = {}) {
+  constructor(userConfig: DeepPartial<WebliskConfig> = {}) {
     this.config = this.mergeConfig(defaultConfig, userConfig);
     this.loadEnvironmentOverrides();
     // Single validation after all configuration is loaded
@@ -137,17 +142,31 @@ export class WebliskConfigManager {
 
   private mergeConfig(
     defaultConf: WebliskConfig,
-    userConf: Partial<WebliskConfig>
+    userConf: DeepPartial<WebliskConfig>,
   ): WebliskConfig {
-    return {
-      server: { ...defaultConf.server, ...userConf.server },
-      logging: { ...defaultConf.logging, ...userConf.logging },
-      websocket: { ...defaultConf.websocket, ...userConf.websocket },
-      session: { ...defaultConf.session, ...userConf.session },
-      security: { ...defaultConf.security, ...userConf.security },
-      monitoring: { ...defaultConf.monitoring, ...userConf.monitoring },
-      development: { ...defaultConf.development, ...userConf.development },
-    };
+    const result = structuredClone(defaultConf); // Deep clone the default config
+
+    // Deep merge user config over default
+    this.deepMerge(result as Record<string, unknown>, userConf as Record<string, unknown>);
+
+    return result;
+  }
+
+  private deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): void {
+    for (const key in source) {
+      if (source[key] !== undefined) {
+        if (Array.isArray(source[key])) {
+          target[key] = [...(source[key] as unknown[])];
+        } else if (source[key] && typeof source[key] === "object") {
+          if (!target[key] || typeof target[key] !== "object") {
+            target[key] = {};
+          }
+          this.deepMerge(target[key] as Record<string, unknown>, source[key] as Record<string, unknown>);
+        } else {
+          target[key] = source[key];
+        }
+      }
+    }
   }
 
   private validateConfig(): void {
@@ -159,7 +178,9 @@ export class WebliskConfigManager {
     }
 
     // Validate hostname
-    if (!this.config.server.hostname || this.config.server.hostname.trim() === '') {
+    if (
+      !this.config.server.hostname || this.config.server.hostname.trim() === ""
+    ) {
       errors.push("Server hostname cannot be empty");
     }
 
@@ -199,15 +220,22 @@ export class WebliskConfigManager {
       if (this.config.security.corsOrigins.length === 0) {
         errors.push("CORS origins cannot be empty when CORS is enabled");
       }
-      if (this.config.security.corsOrigins.includes('*') && this.config.security.corsOrigins.length > 1) {
-        errors.push("Wildcard CORS origin '*' cannot be mixed with specific origins");
+      if (
+        this.config.security.corsOrigins.includes("*") &&
+        this.config.security.corsOrigins.length > 1
+      ) {
+        errors.push(
+          "Wildcard CORS origin '*' cannot be mixed with specific origins",
+        );
       }
     }
 
     // Validate HTTPS configuration for production
     if (!this.config.development.debugMode) {
       if (!this.config.server.enableHttps) {
-        console.warn("WARNING: HTTPS is disabled in production mode - this is insecure!");
+        console.warn(
+          "WARNING: HTTPS is disabled in production mode - this is insecure!",
+        );
       }
       if (this.config.session.cookieSecure && !this.config.server.enableHttps) {
         errors.push("Secure cookies require HTTPS to be enabled");
@@ -220,7 +248,7 @@ export class WebliskConfigManager {
     }
 
     if (errors.length > 0) {
-      throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
+      throw new Error(`Configuration validation failed:\n${errors.join("\n")}`);
     }
   }
 
@@ -229,15 +257,15 @@ export class WebliskConfigManager {
     const env = Deno.env.toObject();
 
     // Environment detection
-    const environment = env.WEBLISK_ENV || env.NODE_ENV || 'production';
-    const isDebug = env.WEBLISK_DEBUG === 'true';
+    const environment = env.WEBLISK_ENV || env.NODE_ENV || "production";
+    const isDebug = env.WEBLISK_DEBUG === "true";
 
     // Auto-configure development settings
-    if (environment === 'development' || isDebug) {
+    if (environment === "development" || isDebug) {
       this.config.development.debugMode = true;
       this.config.development.enableDevTools = true;
-      this.config.logging.level = 'DEBUG';
-      console.log('Development mode enabled');
+      this.config.logging.level = "DEBUG";
+      console.log("Development mode enabled");
     }
 
     // Server configuration
@@ -247,7 +275,7 @@ export class WebliskConfigManager {
     if (env.WEBLISK_HOSTNAME) {
       this.config.server.hostname = env.WEBLISK_HOSTNAME;
     }
-    if (env.WEBLISK_HTTPS === 'true') {
+    if (env.WEBLISK_HTTPS === "true") {
       this.config.server.enableHttps = true;
     }
     if (env.WEBLISK_CERT_PATH) {
@@ -259,32 +287,36 @@ export class WebliskConfigManager {
 
     // Logging configuration
     if (env.WEBLISK_LOG_LEVEL) {
-      this.config.logging.level = env.WEBLISK_LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+      this.config.logging.level = env.WEBLISK_LOG_LEVEL as
+        | "DEBUG"
+        | "INFO"
+        | "WARN"
+        | "ERROR";
     }
     if (env.WEBLISK_LOG_FORMAT) {
-      this.config.logging.format = env.WEBLISK_LOG_FORMAT as 'json' | 'text';
+      this.config.logging.format = env.WEBLISK_LOG_FORMAT as "json" | "text";
     }
     if (env.WEBLISK_LOG_FILE) {
       this.config.logging.logFile = env.WEBLISK_LOG_FILE;
     }
 
     // Development configuration
-    if (env.WEBLISK_HOT_RELOAD === 'true') {
+    if (env.WEBLISK_HOT_RELOAD === "true") {
       this.config.development.hotReload = true;
     }
 
     // Security configuration
-    if (env.WEBLISK_CORS_ENABLED === 'true') {
+    if (env.WEBLISK_CORS_ENABLED === "true") {
       this.config.security.corsEnabled = true;
     }
     if (env.WEBLISK_CORS_ORIGINS) {
-      this.config.security.corsOrigins = env.WEBLISK_CORS_ORIGINS.split(',');
+      this.config.security.corsOrigins = env.WEBLISK_CORS_ORIGINS.split(",");
     }
 
     // Auto-enable secure cookies when HTTPS is enabled
     if (this.config.server.enableHttps) {
       this.config.session.cookieSecure = true;
-      if (environment === 'production') {
+      if (environment === "production") {
         this.config.security.enableHSTS = true;
       }
     }
@@ -296,40 +328,42 @@ export class WebliskConfigManager {
     return { ...this.config };
   }
 
-  getServer(): WebliskConfig['server'] {
+  getServer(): WebliskConfig["server"] {
     return { ...this.config.server };
   }
 
-  getLogging(): WebliskConfig['logging'] {
+  getLogging(): WebliskConfig["logging"] {
     return { ...this.config.logging };
   }
 
-  getWebSocket(): WebliskConfig['websocket'] {
+  getWebSocket(): WebliskConfig["websocket"] {
     return { ...this.config.websocket };
   }
 
-  getSession(): WebliskConfig['session'] {
+  getSession(): WebliskConfig["session"] {
     return { ...this.config.session };
   }
 
-  getSecurity(): WebliskConfig['security'] {
+  getSecurity(): WebliskConfig["security"] {
     return { ...this.config.security };
   }
 
-  getMonitoring(): WebliskConfig['monitoring'] {
+  getMonitoring(): WebliskConfig["monitoring"] {
     return { ...this.config.monitoring };
   }
 
-  getDevelopment(): WebliskConfig['development'] {
+  getDevelopment(): WebliskConfig["development"] {
     return { ...this.config.development };
   }
 
   isProduction(): boolean {
-    return !this.config.development.debugMode && !this.config.development.hotReload;
+    return !this.config.development.debugMode &&
+      !this.config.development.hotReload;
   }
 
   isDevelopment(): boolean {
-    return this.config.development.debugMode || this.config.development.hotReload;
+    return this.config.development.debugMode ||
+      this.config.development.hotReload;
   }
 
   updateConfig(updates: Partial<WebliskConfig>): void {
@@ -347,8 +381,12 @@ export class WebliskConfigManager {
       const userConfig = JSON.parse(configText) as Partial<WebliskConfig>;
       return new WebliskConfigManager(userConfig);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to load configuration from ${configPath}: ${errorMessage}`);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+      throw new Error(
+        `Failed to load configuration from ${configPath}: ${errorMessage}`,
+      );
     }
   }
 
@@ -356,8 +394,12 @@ export class WebliskConfigManager {
     try {
       Deno.writeTextFileSync(configPath, this.exportConfig());
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to save configuration to ${configPath}: ${errorMessage}`);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+      throw new Error(
+        `Failed to save configuration to ${configPath}: ${errorMessage}`,
+      );
     }
   }
 }
@@ -371,3 +413,6 @@ export function getDefaultConfig(): WebliskConfigManager {
   }
   return configInstance;
 }
+
+// Export types
+export type { DeepPartial };

@@ -9,10 +9,10 @@ export interface LogLevel {
 }
 
 export const LOG_LEVELS: Record<string, LogLevel> = {
-  DEBUG: { name: 'DEBUG', value: 0, color: '\x1b[36m' }, // Cyan
-  INFO: { name: 'INFO', value: 1, color: '\x1b[32m' },   // Green
-  WARN: { name: 'WARN', value: 2, color: '\x1b[33m' },   // Yellow
-  ERROR: { name: 'ERROR', value: 3, color: '\x1b[31m' },  // Red
+  DEBUG: { name: "DEBUG", value: 0, color: "\x1b[36m" }, // Cyan
+  INFO: { name: "INFO", value: 1, color: "\x1b[32m" }, // Green
+  WARN: { name: "WARN", value: 2, color: "\x1b[33m" }, // Yellow
+  ERROR: { name: "ERROR", value: 3, color: "\x1b[31m" }, // Red
 } as const;
 
 export interface LogEntry {
@@ -31,7 +31,7 @@ export interface LoggerConfig {
   enableColors: boolean;
   enableTimestamp: boolean;
   enableContext: boolean;
-  format: 'json' | 'text';
+  format: "json" | "text";
 }
 
 export class WebliskLogger {
@@ -44,7 +44,7 @@ export class WebliskLogger {
       enableColors: true,
       enableTimestamp: true,
       enableContext: true,
-      format: 'text',
+      format: "text",
       ...config,
     };
   }
@@ -61,31 +61,31 @@ export class WebliskLogger {
   }
 
   private formatMessage(entry: LogEntry): string {
-    if (this.config.format === 'json') {
+    if (this.config.format === "json") {
       return JSON.stringify({
         timestamp: entry.timestamp,
         level: entry.level.name,
         message: entry.message,
         context: entry.context,
-        error: entry.error ? {
-          name: entry.error.name,
-          message: entry.error.message,
-          stack: entry.error.stack,
-        } : undefined,
+        error: entry.error
+          ? {
+            name: entry.error.name,
+            message: entry.error.message,
+            stack: entry.error.stack,
+          }
+          : undefined,
         component: entry.component,
         sessionId: entry.sessionId,
         connectionId: entry.connectionId,
       });
     }
 
-    const reset = '\x1b[0m';
-    const timestamp = this.config.enableTimestamp 
-      ? `${entry.timestamp} ` 
-      : '';
-    
-    const color = this.config.enableColors ? entry.level.color : '';
+    const reset = "\x1b[0m";
+    const timestamp = this.config.enableTimestamp ? `${entry.timestamp} ` : "";
+
+    const color = this.config.enableColors ? entry.level.color : "";
     const levelText = `[${entry.level.name}]`;
-    
+
     let message = `${timestamp}${color}${levelText}${reset} ${entry.message}`;
 
     if (entry.component) {
@@ -100,7 +100,10 @@ export class WebliskLogger {
       message += ` (connection: ${entry.connectionId.slice(-8)})`;
     }
 
-    if (this.config.enableContext && entry.context && Object.keys(entry.context).length > 0) {
+    if (
+      this.config.enableContext && entry.context &&
+      Object.keys(entry.context).length > 0
+    ) {
       message += `\n  Context: ${JSON.stringify(entry.context, null, 2)}`;
     }
 
@@ -114,7 +117,12 @@ export class WebliskLogger {
     return message;
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, unknown>, error?: Error): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>,
+    error?: Error,
+  ): void {
     if (!this.shouldLog(level)) {
       return;
     }
@@ -128,7 +136,7 @@ export class WebliskLogger {
     };
 
     const formattedMessage = this.formatMessage(entry);
-    
+
     if (level.value >= LOG_LEVELS.ERROR.value) {
       console.error(formattedMessage);
     } else if (level.value >= LOG_LEVELS.WARN.value) {
@@ -150,30 +158,51 @@ export class WebliskLogger {
     this.log(LOG_LEVELS.WARN, message, context);
   }
 
-  error(message: string, error?: Error, context?: Record<string, unknown>): void {
+  error(
+    message: string,
+    error?: Error,
+    context?: Record<string, unknown>,
+  ): void {
     this.log(LOG_LEVELS.ERROR, message, context, error);
   }
 
   // Specialized logging methods for framework events
-  logConnection(type: 'connected' | 'disconnected', connectionId: string, sessionId?: string): void {
+  logConnection(
+    type: "connected" | "disconnected",
+    connectionId: string,
+    sessionId?: string,
+  ): void {
     this.info(`Client ${type}`, {
       connectionId: connectionId.slice(-8),
-      sessionId: sessionId?.slice(-8) || 'unknown',
+      sessionId: sessionId?.slice(-8) || "unknown",
     });
   }
 
-  logComponent(action: 'registered' | 'initialized', componentName: string, context?: Record<string, unknown>): void {
+  logComponent(
+    action: "registered" | "initialized",
+    componentName: string,
+    context?: Record<string, unknown>,
+  ): void {
     this.info(`Component ${action}: ${componentName}`, context);
   }
 
-  logEvent(eventName: string, componentName: string, sessionId?: string, context?: Record<string, unknown>): void {
+  logEvent(
+    eventName: string,
+    componentName: string,
+    sessionId?: string,
+    context?: Record<string, unknown>,
+  ): void {
     this.debug(`Event ${eventName} triggered on ${componentName}`, {
-      sessionId: sessionId?.slice(-8) || 'unknown',
+      sessionId: sessionId?.slice(-8) || "unknown",
       ...context,
     });
   }
 
-  logError(message: string, error: Error, context?: Record<string, unknown>): void {
+  logError(
+    message: string,
+    error: Error,
+    context?: Record<string, unknown>,
+  ): void {
     this.error(message, error, context);
   }
 
@@ -181,10 +210,10 @@ export class WebliskLogger {
     this.config.level = level;
   }
 
-  setFormat(format: 'json' | 'text'): void {
+  setFormat(format: "json" | "text"): void {
     this.config.format = format;
   }
 }
 
 // Export singleton instance
-export const logger = WebliskLogger.getInstance();
+export const logger: WebliskLogger = WebliskLogger.getInstance();

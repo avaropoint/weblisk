@@ -1,0 +1,48 @@
+# Prometheus alerting rules for Weblisk
+groups:
+  - name: weblisk_alerts
+    rules:
+      - alert: WebliskInstanceDown
+        expr: up{job="weblisk"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Weblisk instance is down"
+          description: "Weblisk instance {{ $labels.instance }} has been down for more than 1 minute."
+
+      - alert: WebliskHighMemoryUsage
+        expr: weblisk_memory_usage_bytes / weblisk_memory_available_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on Weblisk instance"
+          description: "Memory usage is above 90% on {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: WebliskHighErrorRate
+        expr: rate(weblisk_requests_failed_total[5m]) / rate(weblisk_requests_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on Weblisk instance"
+          description: "Error rate is above 10% on {{ $labels.instance }} for more than 2 minutes."
+
+      - alert: WebliskSlowResponseTime
+        expr: histogram_quantile(0.95, rate(weblisk_request_duration_seconds_bucket[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response times on Weblisk instance"
+          description: "95th percentile response time is above 1 second on {{ $labels.instance }}."
+
+      - alert: WebliskTooManyConnections
+        expr: weblisk_connections_active > 1000
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Too many active connections"
+          description: "More than 1000 active connections on {{ $labels.instance }}."

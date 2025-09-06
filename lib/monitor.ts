@@ -1,11 +1,26 @@
 /**
- * Health Monitoring System for Weblisk
- * Provides comprehensive health checks, metrics, and performance monitoring
+ * Monitoring System for Weblisk
+ * Provides comprehensive health checks, metrics, performance monitoring,
+ * and framework statistics
  */
+
+export interface FrameworkStats {
+  routes: number;
+  components: number;
+  staticFiles: number;
+  sessions: number;
+  uptime: number;
+  memoryUsage: {
+    rss: number;
+    heapUsed: number;
+    heapTotal: number;
+    external: number;
+  };
+}
 
 export interface HealthCheckResult {
   name: string;
-  status: 'healthy' | 'unhealthy' | 'degraded';
+  status: "healthy" | "unhealthy" | "degraded";
   message: string;
   timestamp: string;
   duration: number; // in milliseconds
@@ -43,20 +58,40 @@ export interface SystemMetrics {
 export interface HealthCheckConfig {
   name: string;
   interval: number; // in milliseconds
-  timeout: number;  // in milliseconds
+  timeout: number; // in milliseconds
   enabled: boolean;
   critical: boolean; // If true, failure makes entire system unhealthy
 }
 
-export type HealthChecker = () => Promise<Omit<HealthCheckResult, 'name' | 'timestamp' | 'duration'>>;
+export type HealthChecker = () => Promise<
+  Omit<HealthCheckResult, "name" | "timestamp" | "duration">
+>;
 
-export class HealthMonitor {
-  private healthChecks = new Map<string, { config: HealthCheckConfig; checker: HealthChecker }>();
+export class FrameworkMonitor {
+  private healthChecks = new Map<
+    string,
+    { config: HealthCheckConfig; checker: HealthChecker }
+  >();
   private lastResults = new Map<string, HealthCheckResult>();
   private metrics: SystemMetrics;
   private startTime: number;
   private intervalId?: number;
-  
+
+  // Framework-specific stats
+  private frameworkStats: FrameworkStats = {
+    routes: 0,
+    components: 0,
+    staticFiles: 0,
+    sessions: 0,
+    uptime: 0,
+    memoryUsage: {
+      rss: 0,
+      heapUsed: 0,
+      heapTotal: 0,
+      external: 0,
+    },
+  };
+
   // Metrics tracking
   private totalRequests = 0;
   private successfulRequests = 0;
@@ -74,6 +109,42 @@ export class HealthMonitor {
     this.startTime = Date.now();
     this.metrics = this.createInitialMetrics();
     this.registerDefaultHealthChecks();
+  }
+
+  /**
+   * Update framework statistics
+   */
+  updateFrameworkStats(stats: Partial<FrameworkStats>): void {
+    this.frameworkStats = {
+      ...this.frameworkStats,
+      ...stats,
+      uptime: Date.now() - this.startTime,
+      memoryUsage: this.getCurrentMemoryUsage(),
+    };
+  }
+
+  /**
+   * Get framework statistics
+   */
+  getFrameworkStats(): FrameworkStats {
+    return {
+      ...this.frameworkStats,
+      uptime: Date.now() - this.startTime,
+      memoryUsage: this.getCurrentMemoryUsage(),
+    };
+  }
+
+  /**
+   * Get current memory usage from Deno
+   */
+  private getCurrentMemoryUsage(): FrameworkStats["memoryUsage"] {
+    const memory = Deno.memoryUsage();
+    return {
+      rss: memory.rss,
+      heapUsed: memory.heapUsed,
+      heapTotal: memory.heapTotal,
+      external: memory.external,
+    };
   }
 
   private createInitialMetrics(): SystemMetrics {
@@ -108,68 +179,76 @@ export class HealthMonitor {
 
   private registerDefaultHealthChecks(): void {
     // Memory usage health check
-    this.registerHealthCheck('memory', {
-      name: 'memory',
+    this.registerHealthCheck("memory", {
+      name: "memory",
       interval: 30000, // 30 seconds
-      timeout: 5000,   // 5 seconds
+      timeout: 5000, // 5 seconds
       enabled: true,
       critical: true,
     }, () => {
       const memoryUsage = this.getMemoryUsage();
       const threshold = 90; // 90% memory usage threshold
-      
+
       if (memoryUsage.percentage > threshold) {
         return Promise.resolve({
-          status: 'unhealthy' as const,
-          message: `Memory usage is ${memoryUsage.percentage.toFixed(1)}% (above ${threshold}% threshold)`,
+          status: "unhealthy" as const,
+          message: `Memory usage is ${
+            memoryUsage.percentage.toFixed(1)
+          }% (above ${threshold}% threshold)`,
           metadata: { memoryUsage },
         });
       } else if (memoryUsage.percentage > 75) {
         return Promise.resolve({
-          status: 'degraded' as const,
-          message: `Memory usage is ${memoryUsage.percentage.toFixed(1)}% (warning level)`,
+          status: "degraded" as const,
+          message: `Memory usage is ${
+            memoryUsage.percentage.toFixed(1)
+          }% (warning level)`,
           metadata: { memoryUsage },
         });
       }
-      
+
       return Promise.resolve({
-        status: 'healthy' as const,
+        status: "healthy" as const,
         message: `Memory usage is ${memoryUsage.percentage.toFixed(1)}%`,
         metadata: { memoryUsage },
       });
     });
 
     // System responsiveness check
-    this.registerHealthCheck('responsiveness', {
-      name: 'responsiveness',
+    this.registerHealthCheck("responsiveness", {
+      name: "responsiveness",
       interval: 60000, // 1 minute
-      timeout: 10000,  // 10 seconds
+      timeout: 10000, // 10 seconds
       enabled: true,
       critical: false,
     }, () => {
       const start = performance.now();
-      
+
       // Simulate system responsiveness test with a small delay
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           const duration = performance.now() - start;
           const threshold = 100; // 100ms threshold
-          
+
           if (duration > threshold * 2) {
             resolve({
-              status: 'unhealthy',
-              message: `System responsiveness is poor (${duration.toFixed(2)}ms)`,
+              status: "unhealthy",
+              message: `System responsiveness is poor (${
+                duration.toFixed(2)
+              }ms)`,
               metadata: { responseTime: duration },
             });
           } else if (duration > threshold) {
             resolve({
-              status: 'degraded',
-              message: `System responsiveness is slow (${duration.toFixed(2)}ms)`,
+              status: "degraded",
+              message: `System responsiveness is slow (${
+                duration.toFixed(2)
+              }ms)`,
               metadata: { responseTime: duration },
             });
           } else {
             resolve({
-              status: 'healthy',
+              status: "healthy",
               message: `System is responsive (${duration.toFixed(2)}ms)`,
               metadata: { responseTime: duration },
             });
@@ -179,7 +258,11 @@ export class HealthMonitor {
     });
   }
 
-  registerHealthCheck(name: string, config: HealthCheckConfig, checker: HealthChecker): void {
+  registerHealthCheck(
+    name: string,
+    config: HealthCheckConfig,
+    checker: HealthChecker,
+  ): void {
     this.healthChecks.set(name, { config, checker });
   }
 
@@ -201,7 +284,10 @@ export class HealthMonitor {
     try {
       // Run health check with timeout
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Health check timeout')), config.timeout);
+        setTimeout(
+          () => reject(new Error("Health check timeout")),
+          config.timeout,
+        );
       });
 
       const result = await Promise.race([checker(), timeoutPromise]);
@@ -218,11 +304,13 @@ export class HealthMonitor {
       return healthResult;
     } catch (error) {
       const duration = performance.now() - start;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+
       const healthResult: HealthCheckResult = {
         name,
-        status: 'unhealthy',
+        status: "unhealthy",
         message: `Health check failed: ${errorMessage}`,
         timestamp,
         duration,
@@ -239,22 +327,27 @@ export class HealthMonitor {
       .filter(([_, { config }]) => config.enabled);
 
     const results = await Promise.allSettled(
-      enabledChecks.map(([name]) => this.runHealthCheck(name))
+      enabledChecks.map(([name]) => this.runHealthCheck(name)),
     );
 
     return results
-      .filter((result): result is PromiseFulfilledResult<HealthCheckResult> => 
-        result.status === 'fulfilled')
-      .map(result => result.value);
+      .filter((result): result is PromiseFulfilledResult<HealthCheckResult> =>
+        result.status === "fulfilled"
+      )
+      .map((result) => result.value);
   }
 
-  getOverallHealth(): { status: 'healthy' | 'unhealthy' | 'degraded'; message: string; checks: HealthCheckResult[] } {
+  getOverallHealth(): {
+    status: "healthy" | "unhealthy" | "degraded";
+    message: string;
+    checks: HealthCheckResult[];
+  } {
     const results = Array.from(this.lastResults.values());
-    
+
     if (results.length === 0) {
       return {
-        status: 'healthy',
-        message: 'No health checks configured',
+        status: "healthy",
+        message: "No health checks configured",
         checks: [],
       };
     }
@@ -263,33 +356,41 @@ export class HealthMonitor {
       .filter(([_, { config }]) => config.critical && config.enabled)
       .map(([name]) => name);
 
-    const criticalResults = results.filter(result => criticalChecks.includes(result.name));
+    const criticalResults = results.filter((result) =>
+      criticalChecks.includes(result.name)
+    );
 
     // Check critical health checks
-    const criticalUnhealthy = criticalResults.filter(result => result.status === 'unhealthy');
+    const criticalUnhealthy = criticalResults.filter((result) =>
+      result.status === "unhealthy"
+    );
     if (criticalUnhealthy.length > 0) {
       return {
-        status: 'unhealthy',
-        message: `Critical health checks failing: ${criticalUnhealthy.map(r => r.name).join(', ')}`,
+        status: "unhealthy",
+        message: `Critical health checks failing: ${
+          criticalUnhealthy.map((r) => r.name).join(", ")
+        }`,
         checks: results,
       };
     }
 
     // Check for degraded status
-    const degraded = results.filter(result => result.status === 'degraded');
-    const unhealthy = results.filter(result => result.status === 'unhealthy');
+    const degraded = results.filter((result) => result.status === "degraded");
+    const unhealthy = results.filter((result) => result.status === "unhealthy");
 
     if (unhealthy.length > 0 || degraded.length > 0) {
       return {
-        status: 'degraded',
-        message: `Some health checks are not optimal: ${[...unhealthy, ...degraded].map(r => r.name).join(', ')}`,
+        status: "degraded",
+        message: `Some health checks are not optimal: ${
+          [...unhealthy, ...degraded].map((r) => r.name).join(", ")
+        }`,
         checks: results,
       };
     }
 
     return {
-      status: 'healthy',
-      message: 'All health checks passing',
+      status: "healthy",
+      message: "All health checks passing",
       checks: results,
     };
   }
@@ -305,7 +406,7 @@ export class HealthMonitor {
         await this.runAllHealthChecks();
         this.updateMetrics();
       } catch (error) {
-        console.error('Error running periodic health checks:', error);
+        console.error("Error running periodic health checks:", error);
       }
     }, 30000); // Run every 30 seconds
 
@@ -338,7 +439,9 @@ export class HealthMonitor {
         total: this.totalRequests,
         successful: this.successfulRequests,
         failed: this.failedRequests,
-        averageResponseTime: this.totalRequests > 0 ? this.responseTimeSum / this.totalRequests : 0,
+        averageResponseTime: this.totalRequests > 0
+          ? this.responseTimeSum / this.totalRequests
+          : 0,
       },
       websocket: {
         totalConnections: this.websocketStats.totalConnections,
@@ -350,7 +453,11 @@ export class HealthMonitor {
     };
   }
 
-  private getMemoryUsage(): { used: number; available: number; percentage: number } {
+  private getMemoryUsage(): {
+    used: number;
+    available: number;
+    percentage: number;
+  } {
     // In a real implementation, you would get actual memory usage
     // For now, we'll use placeholder values
     const used = 100 * 1024 * 1024; // 100MB placeholder
@@ -369,7 +476,7 @@ export class HealthMonitor {
   trackRequest(duration: number, success: boolean): void {
     this.totalRequests++;
     this.responseTimeSum += duration;
-    
+
     if (success) {
       this.successfulRequests++;
     } else {
@@ -381,8 +488,8 @@ export class HealthMonitor {
     this.websocketStats.totalConnections++;
   }
 
-  trackWebSocketMessage(type: 'received' | 'sent'): void {
-    if (type === 'received') {
+  trackWebSocketMessage(type: "received" | "sent"): void {
+    if (type === "received") {
       this.websocketStats.messagesReceived++;
     } else {
       this.websocketStats.messagesSent++;
@@ -396,7 +503,7 @@ export class HealthMonitor {
   updateActiveConnections(count: number): void {
     this.metrics.connections.active = count;
     this.metrics.websocket.activeConnections = count;
-    
+
     if (count > this.maxConcurrentConnections) {
       this.maxConcurrentConnections = count;
     }
@@ -404,11 +511,11 @@ export class HealthMonitor {
 
   // Generate health report for external monitoring systems
   generateHealthReport(): {
-    status: 'healthy' | 'unhealthy' | 'degraded';
+    status: "healthy" | "unhealthy" | "degraded";
     timestamp: string;
     uptime: number;
     version: string;
-    health: ReturnType<HealthMonitor['getOverallHealth']>;
+    health: ReturnType<FrameworkMonitor["getOverallHealth"]>;
     metrics: SystemMetrics;
   } {
     const health = this.getOverallHealth();
@@ -418,7 +525,7 @@ export class HealthMonitor {
       status: health.status,
       timestamp: new Date().toISOString(),
       uptime: Date.now() - this.startTime,
-      version: '2.0.0', // Framework version
+      version: "2.0.0", // Framework version
       health,
       metrics,
     };
@@ -453,22 +560,38 @@ export class HealthMonitor {
     lines.push(`# TYPE weblisk_requests_total counter`);
     lines.push(`weblisk_requests_total ${metrics.requests.total}`);
 
-    lines.push(`# HELP weblisk_requests_successful_total Successful HTTP requests`);
+    lines.push(
+      `# HELP weblisk_requests_successful_total Successful HTTP requests`,
+    );
     lines.push(`# TYPE weblisk_requests_successful_total counter`);
-    lines.push(`weblisk_requests_successful_total ${metrics.requests.successful}`);
+    lines.push(
+      `weblisk_requests_successful_total ${metrics.requests.successful}`,
+    );
 
     // WebSocket messages
-    lines.push(`# HELP weblisk_websocket_messages_received_total WebSocket messages received`);
+    lines.push(
+      `# HELP weblisk_websocket_messages_received_total WebSocket messages received`,
+    );
     lines.push(`# TYPE weblisk_websocket_messages_received_total counter`);
-    lines.push(`weblisk_websocket_messages_received_total ${metrics.websocket.messagesReceived}`);
+    lines.push(
+      `weblisk_websocket_messages_received_total ${metrics.websocket.messagesReceived}`,
+    );
 
-    lines.push(`# HELP weblisk_websocket_messages_sent_total WebSocket messages sent`);
+    lines.push(
+      `# HELP weblisk_websocket_messages_sent_total WebSocket messages sent`,
+    );
     lines.push(`# TYPE weblisk_websocket_messages_sent_total counter`);
-    lines.push(`weblisk_websocket_messages_sent_total ${metrics.websocket.messagesSent}`);
+    lines.push(
+      `weblisk_websocket_messages_sent_total ${metrics.websocket.messagesSent}`,
+    );
 
-    return lines.join('\n') + '\n';
+    return lines.join("\n") + "\n";
   }
 }
 
 // Export singleton instance
-export const healthMonitor = new HealthMonitor();
+export const frameworkMonitor: FrameworkMonitor = new FrameworkMonitor();
+
+// For backward compatibility
+export const healthMonitor = frameworkMonitor;
+export type { FrameworkMonitor as HealthMonitor };
