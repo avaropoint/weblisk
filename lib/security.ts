@@ -211,6 +211,140 @@ export class WebliskSecurity {
           span.textContent = content;
           element.appendChild(span);
         }
+      },
+      
+      // Proper DOM-based methods (recommended approach)
+      createSafeElement: function(tagName, textContent, attributes) {
+        // Validate tag name for safety
+        if (!this.isSafeTagName(tagName)) {
+          throw new Error('Unsafe tag name: ' + tagName);
+        }
+        
+        const element = document.createElement(tagName);
+        if (textContent) {
+          element.textContent = textContent; // Always safe - auto-escapes
+        }
+        if (attributes) {
+          for (const [key, value] of Object.entries(attributes)) {
+            // Generic security validation - block dangerous patterns
+            if (this.isSafeAttribute(key, value)) {
+              element.setAttribute(key, String(value));
+            }
+          }
+        }
+        return element;
+      },
+      
+      // Generic tag name safety checker
+      isSafeTagName: function(tagName) {
+        const name = tagName.toLowerCase();
+        
+        // Block dangerous elements
+        const dangerousTags = [
+          'script', 'iframe', 'frame', 'frameset', 'noframes',
+          'object', 'embed', 'applet', 'form', 'input', 'button',
+          'select', 'textarea', 'option', 'optgroup', 'fieldset',
+          'legend', 'label', 'base', 'meta', 'link', 'style',
+          'title', 'head', 'html', 'body'
+        ];
+        
+        // Check against dangerous tags
+        if (dangerousTags.includes(name)) {
+          return false;
+        }
+        
+        // Validate tag name format (letters, numbers, hyphens only)
+        const validTagPattern = /^[a-z][a-z0-9-]*$/i;
+        if (!validTagPattern.test(name)) {
+          return false;
+        }
+        
+        return true;
+      },
+      
+      // Generic attribute safety checker
+      isSafeAttribute: function(attrName, attrValue) {
+        const name = attrName.toLowerCase();
+        const value = String(attrValue).toLowerCase();
+        
+        // Block dangerous attribute patterns
+        const dangerousAttributes = [
+          /^on[a-z]+$/i,           // Event handlers (onclick, onload, etc.)
+          /^javascript:/i,         // JavaScript protocols
+          /^vbscript:/i,          // VBScript protocols
+          /^data:/i,              // Data URLs (can contain scripts)
+          /^formaction$/i,        // Form action hijacking
+          /^action$/i,            // Form action
+        ];
+        
+        // Block dangerous value patterns
+        const dangerousValues = [
+          /javascript:/i,
+          /vbscript:/i,
+          /data:(?!image\/)/i,    // Allow data: images but not other data URIs
+          /expression\\s*\\(/i,     // CSS expressions
+          /@import/i,             // CSS imports
+          /binding\\s*:/i,         // XML binding
+        ];
+        
+        // Check attribute name against dangerous patterns
+        for (const pattern of dangerousAttributes) {
+          if (pattern.test(name)) {
+            return false;
+          }
+        }
+        
+        // Check attribute value against dangerous patterns
+        for (const pattern of dangerousValues) {
+          if (pattern.test(value)) {
+            return false;
+          }
+        }
+        
+        // Additional validation for specific high-risk attributes
+        if (name === 'href' || name === 'src') {
+          // Allow relative URLs, absolute HTTPS/HTTP, and safe data URIs
+          const safeUrlPattern = /^(https?:\\/\\/|\\/|\\.\\/|#|data:image\\/)/i;
+          if (!safeUrlPattern.test(value)) {
+            return false;
+          }
+        }
+        
+        if (name === 'style') {
+          // Block dangerous CSS patterns
+          const dangerousCss = [
+            /expression\\s*\\(/i,
+            /javascript:/i,
+            /vbscript:/i,
+            /@import/i,
+            /binding\\s*:/i,
+            /url\\s*\\(\\s*["']?\\s*javascript:/i,
+          ];
+          
+          for (const pattern of dangerousCss) {
+            if (pattern.test(value)) {
+              return false;
+            }
+          }
+        }
+        
+        // If it passes all security checks, it's safe
+        return true;
+      },
+      
+      clearAndAppend: function(parent, ...children) {
+        parent.textContent = ''; // Clear safely
+        children.forEach(child => {
+          if (typeof child === 'string') {
+            parent.appendChild(document.createTextNode(child));
+          } else if (child instanceof Node) {
+            parent.appendChild(child);
+          }
+        });
+      },
+      
+      createSafeFragment: function() {
+        return document.createDocumentFragment();
       }
     };
     

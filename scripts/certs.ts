@@ -127,7 +127,8 @@ IP.2 = ::1
     );
     console.log("This is normal for development certificates.");
   } catch (error) {
-    console.error("Failed to generate certificates:", error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Failed to generate certificates:", errorMessage);
     console.log("");
     console.log("Make sure OpenSSL is installed:");
     console.log("macOS: brew install openssl");

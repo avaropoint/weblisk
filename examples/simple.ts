@@ -70,14 +70,30 @@ app.route("/", {
         return;
       }
       
-      // Use framework's safe HTML function to prevent XSS
-      webliskSafe.safeInnerHTML(displayElement, 
-        '<div style="padding: 10px; background: #f0f8ff; border-radius: 5px; margin: 10px 0;">' +
-          '<strong>Click #' + clickCount + ':</strong><br>' +
-          'User said: "<span style="color: #333;">' + (userText || 'Nothing yet!') + '</span>"<br>' +
-          '<small style="color: #666;">Time: ' + new Date().toLocaleTimeString() + '</small>' +
-        '</div>'
+      // Use framework's proper DOM methods for maximum security
+      const containerDiv = webliskSafe.createSafeElement('div', '', {
+        style: 'padding: 10px; background: #f0f8ff; border-radius: 5px; margin: 10px 0;'
+      });
+      
+      const titleElement = webliskSafe.createSafeElement('strong', 'Click #' + clickCount + ':');
+      const br1 = document.createElement('br');
+      const userLabel = document.createTextNode('User said: "');
+      const userSpan = webliskSafe.createSafeElement('span', userText || 'Nothing yet!', {
+        style: 'color: #333;'
+      });
+      const userCloseQuote = document.createTextNode('"');
+      const br2 = document.createElement('br');
+      const timeElement = webliskSafe.createSafeElement('small', 'Time: ' + new Date().toLocaleTimeString(), {
+        style: 'color: #666;'
+      });
+      
+      // Build the structure safely
+      webliskSafe.clearAndAppend(containerDiv, 
+        titleElement, br1, userLabel, userSpan, userCloseQuote, br2, timeElement
       );
+      
+      // Replace display content
+      webliskSafe.clearAndAppend(displayElement, containerDiv);
       
       // Send to server via WebSocket (framework handles sanitization)
       if (window.weblisk && userText) {
@@ -95,13 +111,19 @@ app.route("/", {
                          document.createElement('div');
       responseDiv.id = 'serverResponse';
       
-      // Safe display of server response
-      webliskSafe.safeInnerHTML(responseDiv, 
-        '<div style="padding: 8px; background: #e8f5e8; border-radius: 4px; margin-top: 10px;">' +
-          '<strong>Server Echo:</strong> ' + data.echo + '<br>' +
-          '<small>Processed at: ' + data.timestamp + '</small>' +
-        '</div>'
-      );
+      // Safe display of server response using proper DOM methods
+      const containerDiv = webliskSafe.createSafeElement('div', '', {
+        style: 'padding: 8px; background: #e8f5e8; border-radius: 4px; margin-top: 10px;'
+      });
+      
+      const titleElement = webliskSafe.createSafeElement('strong', 'Server Echo: ');
+      const echoText = document.createTextNode(data.echo);
+      const br = document.createElement('br');
+      const timeElement = webliskSafe.createSafeElement('small', 'Processed at: ' + data.timestamp);
+      
+      // Build structure safely
+      webliskSafe.clearAndAppend(containerDiv, titleElement, echoText, br, timeElement);
+      webliskSafe.clearAndAppend(responseDiv, containerDiv);
       
       document.body.appendChild(responseDiv);
     });

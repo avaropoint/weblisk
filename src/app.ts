@@ -60,10 +60,12 @@ app.route("/", {
         window.weblisk.on('test', (data) => {
           const outputElement = document.getElementById('output');
           if (outputElement) {
-            // Use framework's built-in safe HTML function
-            webliskSafe.safeInnerHTML(outputElement, 
-              '<strong>Server Response:</strong> ' + (data.message || '')
-            );
+            // Use framework's proper DOM-based methods for maximum security
+            const strongElement = webliskSafe.createSafeElement('strong', 'Server Response: ');
+            const messageText = document.createTextNode(data.message || '');
+            
+            // Clear and append safely
+            webliskSafe.clearAndAppend(outputElement, strongElement, messageText);
           }
         });
       }
