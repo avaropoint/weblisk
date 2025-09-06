@@ -5,7 +5,6 @@
 
 import type {
   ComponentDefinition,
-  IWebliskFramework,
   RouteContext,
   ServerEventMessage,
   WebSocketConnection,
@@ -39,7 +38,7 @@ export {
 /**
  * Main Weblisk Framework class
  */
-export class WebliskFramework implements IWebliskFramework {
+export class WebliskFramework {
   private routes = new Map<string, WebliskRoute>();
   private components = new Map<string, ComponentDefinition>();
   private config: WebliskConfig;

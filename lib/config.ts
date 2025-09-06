@@ -147,7 +147,7 @@ export class WebliskConfigManager {
     const result = structuredClone(defaultConf); // Deep clone the default config
 
     // Deep merge user config over default
-    this.deepMerge(result as Record<string, unknown>, userConf as Record<string, unknown>);
+    this.deepMerge(result as unknown as Record<string, unknown>, userConf as unknown as Record<string, unknown>);
 
     return result;
   }
