@@ -1,24 +1,37 @@
 {
   "name": "@avaropoint/weblisk",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "A lightning-fast HTML-over-WebSocket framework for Deno",
   "exports": {
     ".": "./lib/weblisk.ts"
   },
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-write --watch src/app.ts",
-    "start": "deno run --allow-net --allow-read src/app.ts",
+    "dev": "WEBLISK_DEBUG=true WEBLISK_ENV=development deno run --allow-net --allow-read --allow-write --allow-env --watch src/app.ts",
+    "dev:https": "WEBLISK_DEBUG=true WEBLISK_ENV=development WEBLISK_HTTPS=true WEBLISK_CERT_PATH=./certs/localhost.crt WEBLISK_KEY_PATH=./certs/localhost.key deno run --allow-net --allow-read --allow-write --allow-env --watch src/app.ts",
+    "start": "WEBLISK_ENV=production deno run --allow-net --allow-read --allow-env src/app.ts",
+    "start:https": "WEBLISK_ENV=production WEBLISK_HTTPS=true WEBLISK_CERT_PATH=./certs/localhost.crt WEBLISK_KEY_PATH=./certs/localhost.key deno run --allow-net --allow-read --allow-env src/app.ts",
+    "certs": "deno run --allow-read --allow-write --allow-run scripts/generate-certs.ts",
     "fmt": "deno fmt",
     "lint": "deno lint",
-    "test": "deno test --allow-net --allow-read"
+    "test": "WEBLISK_ENV=test deno test --allow-net --allow-read --allow-env tests/",
+    "test:watch": "WEBLISK_ENV=test deno test --allow-net --allow-read --allow-env --watch tests/",
+    "check": "deno check lib/weblisk.ts src/app.ts tests/*.ts"
   },
   "imports": {
+    "@std/assert": "jsr:@std/assert@^1.0.0",
+    "@std/async": "jsr:@std/async@^1.0.0"
   },
   "compilerOptions": {
     "strict": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es2022",
+      "deno.ns"
+    ]
   },
   "fmt": {
     "useTabs": false,
@@ -29,7 +42,14 @@
     "proseWrap": "preserve"
   },
   "lint": {
-    "include": ["src/", "lib/", "*.ts"],
-    "exclude": ["node_modules/", "dist/"]
+    "include": [
+      "src/",
+      "lib/",
+      "*.ts"
+    ],
+    "exclude": [
+      "node_modules/",
+      "dist/"
+    ]
   }
 }
