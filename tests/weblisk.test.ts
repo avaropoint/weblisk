@@ -375,8 +375,9 @@ Deno.test("Weblisk Framework v1.0 - Integration Test", async (t) => {
 
       events: {
         hello: (data, context) => ({
-          message: `Hello ${data.name}! Server time: ${new Date().toISOString()
-            }`,
+          message: `Hello ${data.name}! Server time: ${
+            new Date().toISOString()
+          }`,
           sessionId: context?.sessionId,
         }),
       },
