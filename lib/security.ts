@@ -281,7 +281,7 @@ export class WebliskSecurity {
         const dangerousValues = [
           /javascript:/i,
           /vbscript:/i,
-          /data:(?!image\/)/i,    // Allow data: images but not other data URIs
+          /data:(?!image\\/)/i,    // Allow data: images but not other data URIs
           /expression\\s*\\(/i,     // CSS expressions
           /@import/i,             // CSS imports
           /binding\\s*:/i,         // XML binding

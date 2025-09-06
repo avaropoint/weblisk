@@ -93,6 +93,7 @@ app.route("/", {
 
 // Add static files
 app.addStaticFile("/robots.txt", "User-agent: *\nAllow: /");
+app.addStaticFile("/favicon.ico", "", "image/x-icon");
 
 // Start the server
 await app.start();
