@@ -13,7 +13,6 @@ node_modules/
 .env.*.local
 
 # SSL Certificates (development only)
-certs/
 *.crt
 *.key
 *.pem

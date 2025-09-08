@@ -26,6 +26,11 @@ import {
 import { staticFileManager } from "./static.ts";
 import { CookieManager } from "./cookies.ts";
 import { webSocketManager } from "./websockets.ts";
+import {
+  routeHelpers,
+  type TypedRouteConfig,
+  typedRouteRegistry,
+} from "./route-types.ts";
 
 // Re-export route functionality for convenience
 export {
@@ -34,6 +39,14 @@ export {
   type WebliskFrameworkRouteConfig,
   WebliskRoute,
 };
+
+// Re-export typed route functionality
+export {
+  routeHelpers,
+  type RouteType,
+  type TypedRouteConfig,
+  typedRouteRegistry,
+} from "./route-types.ts";
 
 /**
  * Main Weblisk Framework class
@@ -121,27 +134,72 @@ export class WebliskFramework {
   }
 
   /**
-   * Register a route with the framework
+   * Register a route with the framework (enhanced with typed-routes support)
    */
   route(
     path: string,
-    routeConfig: RouteConfig | WebliskRoute,
+    routeConfig: RouteConfig | WebliskRoute | TypedRouteConfig,
   ): WebliskFramework {
-    const routeHandler = routeConfig instanceof WebliskRoute
-      ? routeConfig
-      : new WebliskRoute(routeConfig);
-    this.routes.set(path, routeHandler);
+    // Handle typed route configuration
+    if ("type" in routeConfig && !("getUserConfig" in routeConfig)) {
+      // This is a TypedRouteConfig
+      const typedConfig = routeConfig as TypedRouteConfig;
 
-    const config = routeConfig instanceof WebliskRoute
-      ? routeConfig.getUserConfig()
-      : routeConfig;
-    logger.info(`Route registered: ${path}`, {
-      hasStyles: !!config.styles,
-      hasTemplate: !!config.template,
-      hasClientCode: !!config.clientCode,
-      hasData: !!config.data,
-      eventCount: Object.keys(config.events || {}).length,
-    });
+      // Register with typed route registry for optimization
+      typedRouteRegistry.register(path, typedConfig);
+
+      // Validate the route configuration
+      const validationErrors = typedRouteRegistry.validateRoute(
+        path,
+        typedConfig,
+      );
+      if (validationErrors.length > 0) {
+        logger.warn(`Route validation warnings for ${path}:`, {
+          errors: validationErrors,
+        });
+      }
+
+      // Create WebliskRoute instance (TypedRouteConfig extends WebliskFrameworkRouteConfig)
+      const routeHandler = new WebliskRoute(typedConfig);
+      this.routes.set(path, routeHandler);
+
+      // Get optimization settings for logging
+      const optimization = typedRouteRegistry.getOptimization(path);
+
+      logger.info(`Typed route registered: ${path}`, {
+        type: typedConfig.type,
+        hasStyles: !!typedConfig.styles,
+        hasTemplate: !!typedConfig.template,
+        hasClientCode: !!typedConfig.clientCode,
+        hasData: !!typedConfig.data,
+        eventCount: Object.keys(typedConfig.events || {}).length,
+        optimization: optimization
+          ? {
+            cacheStrategy: optimization.cacheStrategy,
+            websocketBehavior: optimization.websocketBehavior,
+            updateFrequency: optimization.updateFrequency,
+            priority: optimization.priority,
+          }
+          : undefined,
+      });
+    } else {
+      // Handle existing route configuration (backward compatibility)
+      const routeHandler = routeConfig instanceof WebliskRoute
+        ? routeConfig
+        : new WebliskRoute(routeConfig);
+      this.routes.set(path, routeHandler);
+
+      const config = routeConfig instanceof WebliskRoute
+        ? routeConfig.getUserConfig()
+        : routeConfig;
+      logger.info(`Route registered: ${path}`, {
+        hasStyles: !!config.styles,
+        hasTemplate: !!config.template,
+        hasClientCode: !!config.clientCode,
+        hasData: !!config.data,
+        eventCount: Object.keys(config.events || {}).length,
+      });
+    }
 
     this.updateFrameworkStats();
     return this;
@@ -159,11 +217,175 @@ export class WebliskFramework {
   }
 
   /**
+   * Typed route helper methods for common patterns
+   */
+
+  /**
+   * Register a static content route (optimized for caching)
+   */
+  static(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.static(config));
+  }
+
+  /**
+   * Register a real-time route (optimized for WebSocket streaming)
+   */
+  realtime(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.realtime(config));
+  }
+
+  /**
+   * Register an API endpoint route (optimized for JSON responses)
+   */
+  api(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.api(config));
+  }
+
+  /**
+   * Register a form handling route (optimized for form processing)
+   */
+  form(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.form(config));
+  }
+
+  /**
+   * Register a streaming data route (optimized for continuous data flow)
+   */
+  stream(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.stream(config));
+  }
+
+  // Advanced Route Helpers
+
+  /**
+   * Register a public API route (with documentation and rate limiting)
+   */
+  publicApi(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.publicApi(config));
+  }
+
+  /**
+   * Register a private API route (high-performance internal microservice API)
+   */
+  privateApi(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.privateApi(config));
+  }
+
+  /**
+   * Register a webhook handler (idempotent with retry logic)
+   */
+  webhook(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.webhook(config));
+  }
+
+  /**
+   * Register a microservice communication route (service mesh optimized)
+   */
+  microservice(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.microservice(config));
+  }
+
+  /**
+   * Register an edge-optimized route (CDN and global distribution ready)
+   */
+  edge(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.edge(config));
+  }
+
+  /**
+   * Register a batch processing route (job queuing and long-running tasks)
+   */
+  batch(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.batch(config));
+  }
+
+  /**
+   * Register an analytics route (data collection with privacy controls)
+   */
+  analytics(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.analytics(config));
+  }
+
+  /**
+   * Register a compliance route (audit-ready with full logging)
+   */
+  compliance(
+    path: string,
+    config: Omit<TypedRouteConfig, "type">,
+  ): WebliskFramework {
+    return this.route(path, routeHelpers.compliance(config));
+  }
+
+  /**
+   * Get typed route registry statistics
+   */
+  getTypedRouteStats(): {
+    totalRoutes: number;
+    routesByType: Record<string, number>;
+    prerenderableRoutes: number;
+    websocketRoutes: number;
+    realtimeRoutes: number;
+  } {
+    return typedRouteRegistry.getStats();
+  }
+
+  /**
+   * Get routes that require prerendering
+   */
+  getPrerenderableRoutes(): string[] {
+    return typedRouteRegistry.getPrerenderableRoutes();
+  }
+
+  /**
+   * Get routes that require WebSocket connections
+   */
+  getWebSocketRoutes(): string[] {
+    return typedRouteRegistry.getWebSocketRoutes();
+  }
+
+  /**
    * Update framework statistics for monitoring
    */
   private updateFrameworkStats(): void {
     const webSocketStats = webSocketManager.getStats();
     const staticFileStats = staticFileManager.getStats();
+    const _typedRouteStats = typedRouteRegistry.getStats();
 
     frameworkMonitor.updateFrameworkStats({
       routes: this.routes.size,
@@ -339,10 +561,21 @@ export class WebliskFramework {
         return staticResponse;
       }
 
-      // Route handling
-      const route = this.routes.get(url.pathname);
+      // Route handling - try exact match first, then dynamic routes
+      let route = this.routes.get(url.pathname);
+      let routeParams: Record<string, string> = {};
+
+      if (!route) {
+        // Try to match dynamic routes
+        const matchResult = this.matchDynamicRoute(url.pathname);
+        if (matchResult) {
+          route = matchResult.route;
+          routeParams = matchResult.params;
+        }
+      }
+
       if (route) {
-        return await this.handleRoute(route, request);
+        return await this.handleRoute(route, request, routeParams);
       }
 
       // 404 Not Found
@@ -361,35 +594,97 @@ export class WebliskFramework {
   }
 
   /**
+   * Match a URL path against dynamic routes
+   */
+  private matchDynamicRoute(
+    pathname: string,
+  ): { route: WebliskRoute; params: Record<string, string> } | null {
+    for (const [routePath, route] of this.routes) {
+      // Skip exact matches (already tried)
+      if (routePath === pathname) continue;
+
+      // Only check routes with parameters
+      if (!routePath.includes(":")) continue;
+
+      const params = this.matchRoutePattern(routePath, pathname);
+      if (params) {
+        return { route, params };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Match a specific route pattern against a pathname
+   */
+  private matchRoutePattern(
+    pattern: string,
+    pathname: string,
+  ): Record<string, string> | null {
+    const patternParts = pattern.split("/");
+    const pathnameParts = pathname.split("/");
+
+    // Must have same number of parts
+    if (patternParts.length !== pathnameParts.length) {
+      return null;
+    }
+
+    const params: Record<string, string> = {};
+
+    for (let i = 0; i < patternParts.length; i++) {
+      const patternPart = patternParts[i];
+      const pathnamePart = pathnameParts[i];
+
+      if (patternPart.startsWith(":")) {
+        // Dynamic parameter
+        const paramName = patternPart.slice(1);
+        params[paramName] = decodeURIComponent(pathnamePart);
+      } else if (patternPart !== pathnamePart) {
+        // Static part doesn't match
+        return null;
+      }
+    }
+
+    return params;
+  }
+
+  /**
    * Handle route requests
    */
   private async handleRoute(
     route: WebliskRoute,
     request: Request,
+    routeParams: Record<string, string> = {},
   ): Promise<Response> {
     const url = new URL(request.url);
     const startTime = performance.now();
 
     // Security checks
     if (this.config.security.rateLimitEnabled) {
-      const rateLimitConfig: RateLimitConfig = {
-        windowMs: this.config.security.rateLimitWindowMs,
-        maxRequests: this.config.security.rateLimitRequests,
-      };
+      // Skip rate limiting for HEAD requests in development (used by auto-reload)
+      const isDevelopment = Deno.env.get("WEBLISK_ENV") === "development";
+      const isHeadRequest = request.method === "HEAD";
 
-      if (!security.checkRateLimit(request, rateLimitConfig)) {
-        logger.warn("Rate limit exceeded", {
-          path: url.pathname,
-          ip: request.headers.get("X-Forwarded-For") || "unknown",
-        });
+      if (!isDevelopment || !isHeadRequest) {
+        const rateLimitConfig: RateLimitConfig = {
+          windowMs: this.config.security.rateLimitWindowMs,
+          maxRequests: this.config.security.rateLimitRequests,
+        };
 
-        // Track failed request
-        frameworkMonitor.trackRequest(performance.now() - startTime, false);
+        if (!security.checkRateLimit(request, rateLimitConfig)) {
+          logger.warn("Rate limit exceeded", {
+            path: url.pathname,
+            ip: request.headers.get("X-Forwarded-For") || "unknown",
+          });
 
-        return new Response("Rate limit exceeded", {
-          status: 429,
-          headers: { "Retry-After": "60" },
-        });
+          // Track failed request
+          frameworkMonitor.trackRequest(performance.now() - startTime, false);
+
+          return new Response("Rate limit exceeded", {
+            status: 429,
+            headers: { "Retry-After": "60" },
+          });
+        }
       }
     }
 
@@ -420,6 +715,7 @@ export class WebliskFramework {
       url,
       framework: this,
       sessionId,
+      params: routeParams,
     };
 
     const html = await route.render(context);
@@ -478,26 +774,26 @@ export class WebliskFramework {
     message: ServerEventMessage,
     connection: WebSocketConnection,
   ): Promise<unknown> {
-    // Find the appropriate route (for now, use the first registered route)
-    // In a full implementation, you might want to track which route the WebSocket belongs to
-    const route = this.routes.values().next().value;
-    if (!route) {
-      throw new Error("No routes registered");
+    // Try to find a route that has the requested event handler
+    for (const route of this.routes.values()) {
+      if (route.hasEvent(message.event)) {
+        const url = new URL("http://localhost/"); // Default URL for route events
+        const context: RouteContext = {
+          request: new Request("http://localhost/"),
+          url,
+          framework: this,
+          sessionId: connection.sessionId,
+        };
+
+        return await route.handleEvent(
+          message.event,
+          message.payload as Record<string, unknown>,
+          context,
+        );
+      }
     }
 
-    const url = new URL("http://localhost/"); // Default URL for route events
-    const context: RouteContext = {
-      request: new Request("http://localhost/"),
-      url,
-      framework: this,
-      sessionId: connection.sessionId,
-    };
-
-    return await route.handleEvent(
-      message.event,
-      message.payload as Record<string, unknown>,
-      context,
-    );
+    throw new Error(`No route found with event handler for: ${message.event}`);
   }
 
   /**
@@ -619,6 +915,7 @@ export class WebliskFramework {
 
 // Export the main framework class as default
 export default WebliskFramework;
+export { WebliskFramework as Weblisk }; // Convenient alias
 export { type WebliskConfig, WebliskConfigManager } from "./config.ts";
 export { logger } from "./logger.ts";
 export { frameworkMonitor } from "./monitor.ts";

@@ -26,6 +26,10 @@ import type { RouteConfig } from "./routes.ts";
 export { WebliskFramework as Weblisk } from "./weblisk.ts";
 export { WebliskFramework } from "./weblisk.ts";
 
+// Auto-loader for convention-based apps
+export { createApp, WebliskLoader } from "./loader.ts";
+export type { LoaderConfig } from "./loader.ts";
+
 // Route system
 export {
   type RouteConfig,
@@ -36,6 +40,62 @@ export {
 
 // Helper utilities
 export { css, html, js } from "./helpers.ts";
+
+// Enhanced form processing
+export {
+  type FileUploadConfig,
+  FileUploadProcessor,
+  fileUploadProcessor,
+  type FormProcessorConfig,
+  type FormValidationResult,
+  type FormValidationRule,
+  type FormValidationRules,
+  generateFormClientCode,
+} from "./forms.ts";
+
+// Advanced Route Type System (16 route types)
+export {
+  type AdvancedRouteConfig,
+  type APIManagementConfig,
+  type ComplianceConfig,
+  type MonitoringConfig,
+  ROUTE_OPTIMIZATIONS as ADVANCED_ROUTE_OPTIMIZATIONS,
+  RouteOptimizer,
+  type RouteType,
+  type SecurityConfig,
+  type SLAConfig,
+} from "./route-types.ts";
+
+// Type-based routing system (enhanced with advanced features)
+export {
+  createTypedRoute,
+  ROUTE_OPTIMIZATION_PRESETS as ROUTE_OPTIMIZATIONS,
+  routeHelpers,
+  type RouteOptimization,
+  type TypedRouteConfig,
+  TypedRouteRegistry,
+  typedRouteRegistry,
+} from "./route-types.ts";
+
+// Real-time database integration
+export {
+  createDatabase,
+  DatabaseAdapter,
+  type DatabaseConfig,
+  // DenoKVAdapter removed - too opinionated for framework
+  type QueryOptions,
+  realtimeHelpers,
+  type StreamOptions,
+  WebliskDatabase,
+} from "./database.ts";
+
+// Performance caching system
+export {
+  type CacheConfig,
+  type CachedStructure,
+  WebliskCache,
+  webliskCache,
+} from "./cache.ts";
 
 // Configuration
 export { type WebliskConfig, WebliskConfigManager } from "./config.ts";
@@ -102,13 +162,13 @@ export async function quickStart(
 }
 
 /**
- * Create a new Weblisk application with sensible defaults
+ * Create a new Weblisk framework instance with sensible defaults
  *
  * @example
  * ```typescript
- * import { createApp } from "https://deno.land/x/weblisk/mod.ts";
+ * import { createFramework } from "https://deno.land/x/weblisk/mod.ts";
  *
- * const app = createApp({
+ * const app = createFramework({
  *   port: 8000,
  *   development: true
  * });
@@ -120,7 +180,7 @@ export async function quickStart(
  * app.start();
  * ```
  */
-export async function createApp(options: {
+export async function createFramework(options: {
   port?: number;
   development?: boolean;
   https?: boolean;
@@ -136,7 +196,6 @@ export async function createApp(options: {
     },
     development: {
       debugMode: options.development || false,
-      hotReload: options.development || false,
       enableDevTools: options.development || false,
     },
   };

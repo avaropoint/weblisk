@@ -3,6 +3,92 @@
  * Provides IDE support without enforcing specific patterns
  */
 
+import type { RouteContext } from "./types.ts";
+
+// Type for component registry access
+type GlobalWithRegistry = typeof globalThis & {
+  componentRegistry?: typeof import("./components.ts").componentRegistry;
+};
+
+/**
+ * Component helper functions - work with auto-registered components
+ * These use the global component registry that's populated during app startup
+ */
+export async function component(
+  name: string,
+  props: Record<string, unknown> = {},
+  context?: RouteContext,
+): Promise<string> {
+  // Use the global component registry
+  const registry = (globalThis as GlobalWithRegistry).componentRegistry;
+  if (!registry) {
+    throw new Error(
+      "Component registry not initialized. Make sure the app has loaded components first.",
+    );
+  }
+
+  const comp = registry.get(name);
+  if (!comp) {
+    const available = registry.list();
+    throw new Error(
+      `Component '${name}' not found. Available: ${available.join(", ")}`,
+    );
+  }
+
+  return await comp.render(props, context);
+}
+
+export function componentSync(
+  name: string,
+  props: Record<string, unknown> = {},
+): string {
+  // Use the global component registry for sync usage
+  const registry = (globalThis as GlobalWithRegistry).componentRegistry;
+  if (!registry) {
+    throw new Error(
+      "Component registry not initialized. Components must be loaded first.",
+    );
+  }
+
+  const comp = registry.get(name);
+  if (!comp) {
+    const available = registry.list();
+    throw new Error(
+      `Component '${name}' not found. Available: ${available.join(", ")}`,
+    );
+  }
+
+  const result = comp.config.template(props);
+  // Handle both sync and async templates
+  if (result instanceof Promise) {
+    throw new Error(
+      `Component '${name}' has async template. Use 'component()' instead of 'componentSync()'.`,
+    );
+  }
+  return result;
+}
+
+export async function layout(
+  layoutName: string,
+  sections: Record<string, string>,
+  context?: RouteContext,
+): Promise<string> {
+  return await component(layoutName, sections, context);
+}
+
+export async function when(
+  condition: boolean,
+  componentName: string,
+  props: Record<string, unknown> = {},
+  context?: RouteContext,
+  fallback?: string,
+): Promise<string> {
+  if (condition) {
+    return await component(componentName, props, context);
+  }
+  return fallback || "";
+}
+
 /**
  * HTML template literal helper - enables syntax highlighting in IDEs
  * Usage: html`<div>Hello ${name}</div>`
@@ -125,15 +211,16 @@ export function style(config: {
 }
 
 /**
- * Component helper that combines styles and template
- * Usage: component({ styles: cssString, template: htmlString })
+ * Legacy component template helper (for backward compatibility)
+ * Usage: componentTemplate({ styles: cssString, template: htmlString })
+ * Note: Use the new component system from components.ts for advanced features
  */
 export interface ComponentTemplate {
   styles?: string;
   template: string;
 }
 
-export function component(template: ComponentTemplate): string {
+export function componentTemplate(template: ComponentTemplate): string {
   const styles = template.styles ? `<style>${template.styles}</style>` : "";
   return `${styles}${template.template}`;
 }
@@ -245,3 +332,20 @@ export function classes(
     .filter(Boolean)
     .join(" ");
 }
+
+// Re-export component types and registry for convenience
+export type { WebliskComponentConfig } from "./components.ts";
+export {
+  batch,
+  componentCache,
+  componentRegistry,
+  compose,
+  dev,
+  forEach,
+  fragment,
+  lazy,
+  memo,
+  safe,
+  slot,
+  WebliskComponent,
+} from "./components.ts";

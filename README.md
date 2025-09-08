@@ -5,12 +5,95 @@ A minimal HTML-over-WebSocket framework for Deno featuring **flexible route conf
 ## 🚀 What's New in v1.0
 
 - **🏗️ Modular Architecture**: Clean separation of concerns with dedicated modules for static files, WebSockets, monitoring, and more
-- **📄 Flexible Routes**: Choose between object-based configuration or WebliskRoute class for complex routes
+- **🎯 Type-Based Routing (NEW)**: Intelligent route optimization based on usage patterns (static, realtime, api, form, stream)
+- **📄 Flexible Routes**: Choose between object-based configuration, WebliskRoute class, or typed routes
 - **🎨 JavaScript-Powered CSS**: Dynamic styling with server data access (like SASS but runtime)
 - **⚡ True SSR + WebSocket**: Server-side rendering with real-time enhancement
 - **🔧 Zero Build Tools**: No compilation, bundling, or build steps needed
 - **💎 TypeScript Native**: Full type safety throughout the framework
 - **🛡️ Production Ready**: Comprehensive security, monitoring, and configuration management
+
+## 🎯 Type-Based Routing System
+
+Weblisk now features an intelligent routing system that automatically optimizes routes based on their type and usage patterns:
+
+### Route Types & Automatic Optimizations
+
+| Route Type | Cache Strategy | WebSocket | Prerender | Use Case |
+|------------|---------------|-----------|-----------|----------|
+| `static` | Full caching | Disabled | ✅ | About pages, documentation |
+| `realtime` | Structure only | Required | ❌ | Dashboards, live feeds |
+| `api` | No caching | Disabled | ❌ | JSON endpoints |
+| `form` | Template caching | Required | ❌ | Contact forms, submissions |
+| `stream` | No caching | Streaming | ❌ | Live logs, data streams |
+| `dynamic` | Structure only | Optional | ❌ | User profiles, content |
+| `auth` | No caching | Optional | ❌ | Login, registration |
+| `admin` | Structure caching | Required | ❌ | Admin panels |
+
+### Quick Typed Route Examples
+
+```typescript
+import { Weblisk } from "./mod.ts";
+
+const app = new Weblisk({ port: 3000 });
+
+// Static route - automatically optimized for caching & SEO
+app.static("/about", {
+  template: () => `<h1>About Us</h1><p>Fully cached content</p>`,
+});
+
+// Real-time route - WebSocket streaming enabled
+app.realtime("/dashboard", {
+  template: () => `<div id="metrics">Loading live data...</div>`,
+  clientCode: () => {
+    setInterval(() => updateMetrics(), 1000);
+  },
+  events: {
+    "metric:update": (data) => console.log("Live update:", data),
+  },
+});
+
+// API route - optimized for JSON responses
+app.api("/api/users", {
+  data: async () => ({ users: await getUsers() }),
+});
+
+// Form route - enhanced with WebSocket validation
+app.form("/contact", {
+  template: () => `<form id="contact">...</form>`,
+  events: {
+    "form:submit": (data) => processForm(data),
+  },
+});
+
+// Stream route - continuous data streaming
+app.stream("/logs", {
+  template: () => `<div id="log-stream">Live logs...</div>`,
+  events: {
+    "stream:data": (chunk) => appendLog(chunk),
+  },
+});
+```
+
+### Route Statistics & Monitoring
+
+```typescript
+// Get optimization insights
+console.log(app.getTypedRouteStats());
+// {
+//   totalRoutes: 5,
+//   routesByType: { static: 1, realtime: 1, api: 1, form: 1, stream: 1 },
+//   prerenderableRoutes: 1,
+//   websocketRoutes: 3,
+//   realtimeRoutes: 2
+// }
+
+// Get prerenderable routes for SEO
+const prerenderRoutes = app.getPrerenderableRoutes();
+
+// Get WebSocket-enabled routes
+const wsRoutes = app.getWebSocketRoutes();
+```
 
 ## ✨ Features
 
@@ -23,15 +106,16 @@ A minimal HTML-over-WebSocket framework for Deno featuring **flexible route conf
 - **Session Management**: Automatic cookie-based session persistence
 - **Health Monitoring**: Built-in health checks and metrics
 - **Static File Management**: Efficient static file serving with ETag caching
-- **Hot Reload Ready**: Built-in development workflow
+- **Auto-Reload Ready**: Built-in development workflow
 
 ## 🏗️ Project Structure
 
 ```
 your-project/
-├── lib/
+├── src/
 │   ├── weblisk.ts       # Core framework
 │   ├── routes.ts        # Route system and WebliskRoute class
+│   ├── route-types.ts   # Typed routing system with optimizations
 │   ├── static.ts        # Static file management
 │   ├── websockets.ts    # WebSocket connection management
 │   ├── monitor.ts       # Health monitoring and metrics
@@ -42,12 +126,8 @@ your-project/
 │   ├── logger.ts        # Logging system
 │   ├── helpers.ts       # Template helpers
 │   └── index.ts         # Main exports
-├── src/
-│   ├── app.ts           # Main application
-│   └── routes/          # Route files (optional organization)
 ├── tests/
 │   └── weblisk.test.ts  # Comprehensive test suite
-├── examples/            # Example applications
 ├── mod.ts               # Framework entry point
 ├── deno.json            # Deno configuration
 └── README.md            # This file
@@ -128,8 +208,8 @@ app.route("/", {
 
     // Setup interactions
     function sendEvent(action) {
-      if (window.WebliskApp) {
-        window.WebliskApp.sendEvent(action, {
+      if (window.Weblisk) {
+        window.Weblisk.sendEvent(action, {
           timestamp: Date.now(),
           user: ${JSON.stringify(data.user)}
         });
@@ -287,7 +367,7 @@ Built-in WebSocket handling in every route:
 
 ```typescript
 // Client to Server (in clientCode)
-window.WebliskApp.sendEvent('eventName', data);
+window.Weblisk.sendEvent('eventName', data);
 
 // Server to Client (in events)
 events: {
@@ -310,7 +390,7 @@ Weblisk v1.0 features a clean modular design:
 ## 📋 Available Commands
 
 ```bash
-# Development server with hot reload
+# Development server with auto-reload
 deno task dev
 
 # Start production server
@@ -339,7 +419,7 @@ deno task test
 | Health Monitoring   | Built-in health checks and metrics             |
 | Security            | CSRF protection and rate limiting              |
 | Type Safety         | Full TypeScript support throughout             |
-| Development         | Hot reload and comprehensive dev tools         |
+| Development         | Auto-reload and comprehensive dev tools        |
 
 ## 🎨 Template Helpers
 
@@ -393,7 +473,7 @@ Visit `http://localhost:3000/` to see:
 ## 🌟 Production Features
 
 ### Development Tools
-- **Hot Reload**: Automatic server restart on file changes
+- **Auto-Reload**: Automatic server restart on file changes
 - **Debug Mode**: Comprehensive logging and error reporting
 - **Type Safety**: Full TypeScript support with strict checking
 - **Testing**: Comprehensive test suite with 18 test scenarios
@@ -419,16 +499,6 @@ Visit `http://localhost:3000/` to see:
 deployctl deploy --project=your-project src/app.ts
 ````
 
-### Docker
-
-```dockerfile
-FROM denoland/deno:latest
-WORKDIR /app
-COPY . .
-EXPOSE 3000
-CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "src/app.ts"]
-```
-
 ### Traditional VPS
 
 ```bash
@@ -450,7 +520,7 @@ WEBLISK_ENV=production deno run --allow-net --allow-read --allow-env src/app.ts
 7. **⚡ Performance**: True SSR with progressive WebSocket enhancement
 8. **🛡️ Production Ready**: Built-in security, monitoring, and configuration
 9. **💎 Type Safety**: Full TypeScript support throughout the framework
-10. **🔧 Developer Experience**: Hot reload, comprehensive testing, and excellent tooling
+10. **🔧 Developer Experience**: Auto-reload, comprehensive testing, and excellent tooling
 
 ## 📄 License
 

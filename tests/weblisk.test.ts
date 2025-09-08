@@ -5,8 +5,8 @@
 
 import { assertEquals, assertExists } from "@std/assert";
 import { css, html, js, Weblisk } from "../mod.ts";
-import { WebliskError } from "../lib/types.ts";
-import { LOG_LEVELS, logger } from "../lib/logger.ts";
+import { WebliskError } from "../src/types.ts";
+import { LOG_LEVELS, logger } from "../src/logger.ts";
 
 // Test configuration
 const TEST_PORT = 3001;
@@ -38,7 +38,6 @@ const getTestConfig = (port: number, extraConfig = {}) => ({
   },
   development: {
     debugMode: false, // Disable debug to reduce logs
-    hotReload: false,
     enableDevTools: false,
   },
   ...extraConfig,

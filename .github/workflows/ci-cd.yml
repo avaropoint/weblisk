@@ -22,10 +22,10 @@ jobs:
           deno-version: v2.4.5
 
       - name: Cache dependencies
-        run: deno cache lib/weblisk.ts src/app.ts tests/*.ts
+        run: deno cache src/weblisk.ts src/app.ts tests/*.ts
 
       - name: Run type checking
-        run: deno check lib/weblisk.ts src/app.ts tests/*.ts
+        run: deno check src/weblisk.ts src/app.ts tests/*.ts
 
       - name: Run linting
         run: deno lint
@@ -70,7 +70,7 @@ jobs:
         run: |
           # Check for known vulnerabilities in dependencies
           echo "=== Dependency Security Audit ==="
-          deno info --json lib/weblisk.ts | grep -o '"specifier":[^,]*' | grep -o 'https://[^"]*' | sort -u > deps.txt
+          deno info --json src/weblisk.ts | grep -o '"specifier":[^,]*' | grep -o 'https://[^"]*' | sort -u > deps.txt
           echo "External dependencies found:"
           cat deps.txt
           
@@ -90,7 +90,7 @@ jobs:
           
           SECRETS_FOUND=false
           for pattern in "${SECRET_PATTERNS[@]}"; do
-            if grep -r -i -E "$pattern" lib/ src/ --include="*.ts" --exclude-dir=node_modules; then
+            if grep -r -i -E "$pattern" src/ --include="*.ts" --exclude-dir=node_modules; then
               SECRETS_FOUND=true
               echo "⚠️  Potential hardcoded secret found: $pattern"
             fi
@@ -101,7 +101,7 @@ jobs:
           fi
           
           # Check for eval usage (blocking)
-          if grep -r "eval(" lib/ src/ --include="*.ts"; then
+          if grep -r "eval(" src/ --include="*.ts"; then
             echo "⚠️  eval() usage found - potential security risk"
             exit 1
           else
@@ -109,7 +109,7 @@ jobs:
           fi
           
           # Check for potential XSS vulnerabilities (warning only)
-          if grep -r "innerHTML\s*=" lib/ src/ --include="*.ts"; then
+          if grep -r "innerHTML\s*=" src/ --include="*.ts"; then
             echo "⚠️  innerHTML usage found - potential XSS risk if data is not sanitized"
             echo "   Consider using textContent or proper escaping for user data"
           else
@@ -117,7 +117,7 @@ jobs:
           fi
           
           # Check for unsafe HTTP requests in production code
-          if grep -r "http://" lib/ --include="*.ts" | grep -v "localhost" | grep -v "127.0.0.1"; then
+          if grep -r "http://" src/ --include="*.ts" | grep -v "localhost" | grep -v "127.0.0.1"; then
             echo "⚠️  Unsafe HTTP URLs found in production code"
           else
             echo "✅ No unsafe HTTP URLs found"

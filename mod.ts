@@ -29,8 +29,8 @@
  * ```
  */
 
-// Re-export everything from the lib index
-export * from "./lib/index.ts";
+// Re-export everything from the src index
+export * from "./src/index.ts";
 
 // Default export for convenience
-export { WebliskFramework as default } from "./lib/weblisk.ts";
+export { WebliskFramework as default } from "./src/weblisk.ts";

@@ -68,7 +68,6 @@ export interface WebliskConfig {
 
   // Development configuration
   development: {
-    hotReload: boolean;
     debugMode: boolean;
     enableDevTools: boolean;
   };
@@ -124,7 +123,6 @@ export const defaultConfig: WebliskConfig = {
   },
 
   development: {
-    hotReload: false,
     debugMode: false,
     enableDevTools: false,
   },
@@ -310,8 +308,8 @@ export class WebliskConfigManager {
     }
 
     // Development configuration
-    if (env.WEBLISK_HOT_RELOAD === "true") {
-      this.config.development.hotReload = true;
+    if (env.WEBLISK_DEBUG === "true") {
+      this.config.development.debugMode = true;
     }
 
     // Security configuration
@@ -366,13 +364,11 @@ export class WebliskConfigManager {
   }
 
   isProduction(): boolean {
-    return !this.config.development.debugMode &&
-      !this.config.development.hotReload;
+    return !this.config.development.debugMode;
   }
 
   isDevelopment(): boolean {
-    return this.config.development.debugMode ||
-      this.config.development.hotReload;
+    return this.config.development.debugMode;
   }
 
   updateConfig(updates: Partial<WebliskConfig>): void {

@@ -50,12 +50,13 @@ export type WebSocketMessage =
 
 // 📄 Single-file route configuration
 // Route rendering context
-export interface RouteContext {
+export interface RouteContext extends Record<string, unknown> {
   request: Request;
   url: URL;
   // deno-lint-ignore no-explicit-any
   framework: any; // Framework instance - using any to avoid circular dependency
   sessionId?: string;
+  params?: Record<string, string>; // Route parameters (e.g., { slug: "hello-world" })
 }
 
 // Event handler types with proper typing
