@@ -235,7 +235,9 @@ export class WebliskFormProcessor {
         );
       } else if (typeof value === "object" && value !== null) {
         // Recursively sanitize nested objects
-        sanitized[key] = this.sanitizeFormData(value as Record<string, unknown>);
+        sanitized[key] = this.sanitizeFormData(
+          value as Record<string, unknown>,
+        );
       } else {
         // Keep other types as-is (numbers, booleans, etc.)
         sanitized[key] = value;

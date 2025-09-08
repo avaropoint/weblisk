@@ -336,8 +336,12 @@ export class WebliskLoader {
         : (() => (typeof module.styles === "string" ? module.styles : "")),
       clientCode,
       data: typeof module.data === "function"
-        ? module.data as (context: RouteContext) => Record<string, unknown> | Promise<Record<string, unknown>>
-        : (module.data ? () => module.data as Record<string, unknown> : undefined),
+        ? module.data as (
+          context: RouteContext,
+        ) => Record<string, unknown> | Promise<Record<string, unknown>>
+        : (module.data
+          ? () => module.data as Record<string, unknown>
+          : undefined),
       events: (module.events || {}) as unknown as Record<
         string,
         (data: Record<string, unknown>, context: RouteContext) => unknown

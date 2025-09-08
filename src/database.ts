@@ -87,7 +87,9 @@ export abstract class DatabaseAdapter {
     sql: string,
     params?: unknown[],
   ): Promise<DatabaseResult>;
-  abstract transaction<T>(operations: (tx: DatabaseTransaction) => Promise<T>): Promise<T>;
+  abstract transaction<T>(
+    operations: (tx: DatabaseTransaction) => Promise<T>,
+  ): Promise<T>;
   abstract health(): Promise<boolean>;
   abstract createChangeStream(
     prefix: string,
@@ -170,7 +172,7 @@ export class WebliskDatabase {
     params?: unknown[],
   ): Promise<{ changes: number; lastInsertId?: string | number }> {
     const result = await this.adapter.execute(sql, params);
-    
+
     // Invalidate cache if enabled
     if (this.adapter.config.enableQueryCache) {
       // TODO: Implement smarter cache invalidation based on affected tables
@@ -341,7 +343,11 @@ export class WebliskDatabase {
   /**
    * Get cache statistics
    */
-  getCacheStats(): { cacheSize: number; activeStreams: number; totalCallbacks: number } {
+  getCacheStats(): {
+    cacheSize: number;
+    activeStreams: number;
+    totalCallbacks: number;
+  } {
     return {
       cacheSize: this.queryCache.size,
       activeStreams: this.changeStreams.size,
@@ -376,7 +382,9 @@ export function createDatabase(config: DatabaseConfig): WebliskDatabase {
       return Promise.resolve({ affectedRows: 0, changes: 0 });
     }
 
-    async transaction<T>(operations: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
+    async transaction<T>(
+      operations: (tx: DatabaseTransaction) => Promise<T>,
+    ): Promise<T> {
       // Implementation would depend on database type
       // For now, just execute without transaction
       const mockTx: DatabaseTransaction = {
@@ -410,7 +418,10 @@ export const realtimeHelpers = {
   /**
    * Create a change stream query
    */
-  createChangeStreamQuery: (table: string, operations: string[]): { table: string; operations: string[]; timestamp: Date } => {
+  createChangeStreamQuery: (
+    table: string,
+    operations: string[],
+  ): { table: string; operations: string[]; timestamp: Date } => {
     return {
       table,
       operations,
