@@ -3,7 +3,7 @@
  * Convention-based automatic discovery and registration system
  */
 
-import { join, resolve } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { join, resolve } from "@std/path";
 import { WebliskFramework } from "./weblisk.ts";
 import { type RouteConfig, type RouteContext, WebliskRoute } from "./routes.ts";
 import { WebliskLogger } from "./logger.ts";
